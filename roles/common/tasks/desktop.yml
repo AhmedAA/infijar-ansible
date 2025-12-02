@@ -1,0 +1,135 @@
+---
+- name: Install XFCE and tigervnc
+  ansible.builtin.apt:
+    name:
+      - xfce4
+      # - xfce4-goodies
+      - tigervnc-standalone-server
+      - tigervnc-tools
+      - tigervnc-xorg-extension
+      - novnc
+      - websockify
+      - dbus-x11
+      - intltool
+      - libtool
+      - librsvg2-common
+      - papirus-icon-theme
+    state: present
+    install_recommends: no
+
+- name: Copy VNC start script from template
+  ansible.builtin.template:
+    src: start-desktop.j2
+    dest: /usr/local/bin/start-desktop
+    mode: '0755'
+
+- name: Copy VNC stop script from files
+  ansible.builtin.copy:
+    src: stop-desktop
+    dest: /usr/local/bin/stop-desktop
+    mode: '0755'
+
+- name: Ensure tigervnc directory exists for the user
+  ansible.builtin.file:
+    path: "{{ target_user_home }}/.config/tigervnc"
+    state: directory
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: '0755'
+
+- name: Copy xstartup config file
+  ansible.builtin.copy:
+    src: xstartup
+    dest: "{{ target_user_home }}/.config/tigervnc"
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: '0755'
+  become: yes
+  become_user: "{{ target_user }}"
+
+- name: Touch .Xauthority file
+  ansible.builtin.file:
+    path: "{{ target_user_home }}/.Xauthority"
+    state: touch
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: "0644"
+
+### Theming
+- name: Create user themes directory
+  ansible.builtin.file:
+    path: "{{ target_user_home }}/.themes"
+    state: directory
+    mode: '0755'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+  become: yes
+
+- name: Download and extract Gruvbox GTK Theme to /tmp
+  ansible.builtin.unarchive:
+    src: https://github.com/Fausto-Korpsvart/Gruvbox-GTK-Theme/archive/refs/heads/master.zip
+    dest: /tmp
+    remote_src: yes
+  become: yes
+
+- name: Install Gruvbox Themes to user directory
+  ansible.builtin.shell:
+    cmd: cp -r -n /tmp/Gruvbox-GTK-Theme-master/themes/* {{ target_user_home }}/.themes/
+  args:
+    creates: "{{ target_user_home }}/.themes/Gruvbox-Dark-BL"
+  become: yes
+
+- name: Fix ownership of themes
+  ansible.builtin.file:
+    path: "{{ target_user_home }}/.themes"
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    recurse: yes
+  become: yes
+
+- name: Clean up temporary theme files
+  ansible.builtin.file:
+    path: /tmp/Gruvbox-GTK-Theme-master
+    state: absent
+  become: yes
+
+- name: Ensure XFCE config directory exists
+  ansible.builtin.file:
+    path: "{{ target_user_home }}/.config/xfce4/xfconf/xfce-perchannel-xml"
+    state: directory
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: '0755'
+
+- name: Apply XFCE xsettings
+  ansible.builtin.copy:
+    src: xsettings.xml
+    dest: "{{ target_user_home }}/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml"
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: '0644'
+
+- name: Apply XFCE xfwm settings
+  ansible.builtin.copy:
+    src: xfwm4.xml
+    dest: "{{ target_user_home }}/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml"
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: '0644'
+
+- name: Deploy custom wallpaper image
+  ansible.builtin.copy:
+    src: "iamroot_cozette.png"
+    dest: "/usr/share/backgrounds/iamroot_cozette.png"
+    mode: '0644'
+    owner: root
+    group: root
+  become: yes
+
+- name: Apply Desktop Background Configuration (xfce4-desktop)
+  ansible.builtin.template:
+    src: xfce4-desktop.xml.j2
+    dest: "{{ target_user_home }}/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml"
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: '0644'

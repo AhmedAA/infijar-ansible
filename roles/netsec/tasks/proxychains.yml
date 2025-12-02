@@ -1,0 +1,59 @@
+---
+- name: Clone proxychains-ng repository
+  ansible.builtin.git:
+    repo: https://github.com/rofl0r/proxychains-ng
+    dest: /opt/tools/proxychains-ng
+    depth: 1
+    version: master
+  become: yes
+
+- name: Build and install proxychains-ng
+  ansible.builtin.shell:
+    cmd: |
+      ./configure --prefix=/usr --sysconfdir=/etc
+      make -j$(nproc)
+      make install
+      make install-config
+      make clean
+    chdir: /opt/tools/proxychains-ng
+  args:
+    creates: /usr/bin/proxychains4
+  become: yes
+
+- name: Symlink proxyresolv to /usr/bin
+  ansible.builtin.file:
+    src: /opt/tools/proxychains-ng/src/proxyresolv
+    dest: /usr/bin/proxyresolv
+    state: link
+    force: yes
+  become: yes
+
+- name: Deploy custom proxychains.conf
+  ansible.builtin.copy:
+    src: proxychains.conf
+    dest: /etc/proxychains.conf
+    mode: '0644'
+    owner: root
+    group: root
+  become: yes
+
+- name: Create proxychains aliases
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_aliases.d/proxychains.zsh"
+    content: |
+      alias proxychains4='proxychains4 '
+      alias proxychains='proxychains4 '
+      alias pc="proxychains"
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+
+- name: Add proxychains history commands
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_history.d/proxychains.history"
+    content: |
+      proxychains -q
+      proxychains -f config.conf
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"

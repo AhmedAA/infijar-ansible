@@ -1,0 +1,49 @@
+---
+- name: Clone SecLists repository
+  ansible.builtin.git:
+    repo: https://github.com/danielmiessler/SecLists.git
+    dest: /opt/lists/seclists
+    depth: 1
+    version: master
+    force: yes
+  become: yes
+
+- name: Extract rockyou.txt
+  ansible.builtin.unarchive:
+    src: /opt/lists/seclists/Passwords/Leaked-Databases/rockyou.txt.tar.gz
+    dest: /opt/lists/
+    remote_src: yes
+    creates: /opt/lists/rockyou.txt
+  become: yes
+
+- name: Remove SecLists metadata and git history
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /opt/lists/seclists/.git
+    - /opt/lists/seclists/.github
+    - /opt/lists/seclists/.bin
+    - /opt/lists/seclists/LICENSE
+    - /opt/lists/seclists/CONTRIBUTING.md
+    - /opt/lists/seclists/README.md
+  become: yes
+
+- name: Ensure /usr/share/wordlists directory exists
+  ansible.builtin.file:
+    path: /usr/share/wordlists
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Create standard wordlist symlinks
+  ansible.builtin.file:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    state: link
+    force: yes
+  loop:
+    - { src: '/opt/lists/seclists', dest: '/usr/share/seclists' }
+    - { src: '/opt/lists/seclists', dest: '/usr/share/wordlists/seclists' }
+    - { src: '/opt/lists/rockyou.txt', dest: '/usr/share/wordlists/rockyou.txt' }
+  become: yes

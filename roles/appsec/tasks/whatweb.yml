@@ -1,0 +1,39 @@
+---
+# tasks file for installing WhatWeb
+
+- name: Clone WhatWeb repository
+  ansible.builtin.git:
+    repo: https://github.com/urbanadventurer/WhatWeb.git
+    dest: /opt/tools/WhatWeb
+    depth: 1
+    version: master
+  become: yes
+
+- name: Install specific gems for WhatWeb
+  ansible.builtin.shell:
+    cmd: |
+      /usr/local/rvm/bin/rvm {{ rvm_default_ruby }}@whatweb --create do gem install addressable
+      /usr/local/rvm/bin/rvm {{ rvm_default_ruby }}@whatweb --create do bundle install --gemfile /opt/tools/WhatWeb/Gemfile
+  become: yes
+  args:
+    creates: /opt/tools/WhatWeb/Gemfile.lock
+
+- name: Create WhatWeb aliases
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_aliases.d/whatweb.zsh"
+    content: |
+      # WhatWeb Alias
+      # Forces execution using the specific RVM gemset
+      alias whatweb='/usr/local/rvm/gems/ruby-{{ rvm_default_ruby }}@whatweb/wrappers/ruby /opt/tools/WhatWeb/whatweb'
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+
+- name: Add WhatWeb history commands
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_history.d/whatweb.history"
+    content: |
+      whatweb $TARGET
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"

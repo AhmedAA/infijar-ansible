@@ -1,0 +1,49 @@
+---
+- name: Update plocate database
+  ansible.builtin.command: updatedb
+  become: yes
+  ignore_errors: yes
+
+- name: Clean up cache directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ target_user_home }}/.bundle/cache"
+    - "{{ target_user_home }}/.cache"
+    - "{{ target_user_home }}/.cargo/registry"
+    - "{{ target_user_home }}/.gradle/caches"
+    - "{{ target_user_home }}/.npm/_cacache"
+    - "{{ target_user_home }}/.nvm/.cache"
+    - /var/lib/apt/lists
+
+- name: Clean up wildcard directories (Go mod cache)
+  ansible.builtin.shell:
+    cmd: rm -rf {{ target_user_home }}/.asdf/installs/golang/*/packages/pkg/mod
+  become: yes
+
+- name: Clean up /tmp
+  ansible.builtin.shell:
+    # We use 'find' to delete files, but EXCLUDE anything starting with 'ansible'
+    # -mindepth 1: Don't delete /tmp itself
+    # -maxdepth 1: Look at files directly in /tmp
+    # ! -name 'ansible*': Skip Ansible's payload files
+    # -exec rm -rf {} +: Delete the rest
+    cmd: find /tmp -mindepth 1 -maxdepth 1 ! -name 'ansible*' -exec rm -rf {} +
+  become: yes
+  when: container | bool
+
+- name: Kill any listening processes
+  ansible.builtin.shell:
+    executable: /bin/bash
+    cmd: |
+      listening_processes=$(ss -lnpt | awk -F"," 'NR>1 {split($2,a,"="); print a[2]}')
+      
+      if [[ -n "$listening_processes" ]]; then
+          echo "Killing listening processes: $listening_processes"
+          kill -9 $listening_processes
+      else
+          echo "No listening processes found."
+      fi
+  become: yes
+  ignore_errors: yes

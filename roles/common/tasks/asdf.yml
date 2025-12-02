@@ -1,0 +1,74 @@
+---
+- name: Ensure /opt/tools/bin directory exists
+  ansible.builtin.file:
+    path: /opt/tools/bin
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Set architecture variable for asdf
+  ansible.builtin.set_fact:
+    asdf_arch: "{{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' }}"
+  when: ansible_architecture in ['x86_64', 'aarch64']
+
+- name: Fail if architecture is not supported
+  ansible.builtin.fail:
+    msg: "Architecture {{ ansible_architecture }} is not supported for asdf installation."
+  when: asdf_arch is not defined
+
+- name: Get latest asdf release info
+  ansible.builtin.uri:
+    url: https://api.github.com/repos/asdf-vm/asdf/releases/latest
+    method: GET
+    return_content: yes
+    headers:
+      Accept: "application/vnd.github.v3+json"
+  register: asdf_release_data
+
+- name: Find matching asset URL
+  ansible.builtin.set_fact:
+    asdf_download_url: >-
+      {{ (asdf_release_data.json.assets
+          | selectattr('name', 'search', 'linux-' + asdf_arch + '.tar.gz')
+          | map(attribute='browser_download_url')
+          | first) }}
+
+- name: Download and install asdf binary
+  ansible.builtin.unarchive:
+    src: "{{ asdf_download_url }}"
+    dest: /opt/tools/bin
+    remote_src: yes
+    mode: '0755'
+    creates: /opt/tools/bin/asdf
+
+- name: Ensure asdf completions directory exists for user
+  ansible.builtin.file:
+    path: "{{ target_user_home }}/.asdf/completions"
+    state: directory
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: '0755'
+
+- name: Generate asdf zsh completion
+  ansible.builtin.shell:
+    cmd: /opt/tools/bin/asdf completion zsh > "{{ target_user_home }}/.asdf/completions/_asdf"
+  args:
+    creates: "{{ target_user_home }}/.asdf/completions/_asdf"
+  become: yes
+  become_user: "{{ target_user }}"
+
+- name: Create asdf shell configuration
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zshrc.d/10-asdf.zsh"
+    content: |
+      # Add asdf shims to path
+      export PATH="$HOME/.asdf/shims:$PATH"
+      # asdf completions
+      # append completions to fpath
+      fpath=($HOME/.asdf/completions $fpath)
+      # initialise completions with ZSH's compinit
+      autoload -Uz compinit && compinit
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"

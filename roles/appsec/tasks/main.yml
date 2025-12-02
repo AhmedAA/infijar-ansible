@@ -1,0 +1,82 @@
+---
+- name: Load common defaults
+  ansible.builtin.include_vars:
+    file: ../../common/defaults/main.yml
+
+- name: Install AppSec tools through apt
+  ansible.builtin.apt:
+    name: "{{ appsec_apt_packages }}"
+    state: present
+    install_recommends: no
+  become: yes
+
+- name: Create AppSec history drop-ins
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_history.d/{{ item.filename }}.history"
+    content: "{{ item.content }}"
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+  loop:
+    - filename: dirb
+      content: |
+        dirb "http://$TARGET" /usr/share/seclists/Discovery/Web-Content/big.txt
+
+    - filename: prips
+      content: |
+        prips 192.168.56.0/24|hakrevdns -d|httpx -probe -tech-detect -status-code -fr
+        prips 192.168.0.0 192.168.0.255
+        prips -i4 192.168.0.10 192.168.0.250
+        prips 173.0.84.0/24 | hakrevdns
+
+- name: Create AppSec aliases drop-ins
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_aliases.d/{{ item.filename }}.zsh"
+    content: "{{ item.content }}"
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+  loop:
+    - filename: nmap
+      content: |
+        alias scan-range='nmap -T5 -n -sn'
+        alias nse='ls /usr/share/nmap/scripts | grep '
+
+- name: Install whatweb
+  ansible.builtin.include_tasks: whatweb.yml
+
+- name: Install wfuzz
+  ansible.builtin.include_tasks: wfuzz.yml
+
+- name: Install gobuster
+  ansible.builtin.include_tasks: gobuster.yml
+
+- name: Install feroxbuster
+  ansible.builtin.include_tasks: feroxbuster.yml
+
+- name: Install kiterunner
+  ansible.builtin.include_tasks: kiterunner.yml
+
+- name: Install sqlmap
+  ansible.builtin.include_tasks: sqlmap.yml
+
+- name: Install nosqlmap
+  ansible.builtin.include_tasks: nosqlmap.yml
+
+- name: Install testssl
+  ansible.builtin.include_tasks: testssl.yml
+
+- name: Install wafw00f
+  ansible.builtin.include_tasks: wafwoof.yml
+
+- name: Install jwt_tool
+  ansible.builtin.include_tasks: jwt_tool.yml
+
+- name: Install nuclei
+  ansible.builtin.include_tasks: nuclei.yml
+
+- name: Install Burp Suite
+  ansible.builtin.include_tasks: burpsuite.yml
+
+- name: Install Caido
+  ansible.builtin.include_tasks: caido.yml

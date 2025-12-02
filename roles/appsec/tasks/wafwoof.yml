@@ -1,0 +1,17 @@
+---
+- name: Install wafw00f via pipx
+  ansible.builtin.shell:
+    cmd: "{{ pyenv_root }}/versions/{{ pyenv_python_versions[0] }}/bin/pipx install --system-site-packages wafw00f"
+  args:
+    creates: "{{ target_user_home }}/.local/bin/wafw00f"
+  become: yes
+  become_user: "{{ target_user }}"
+
+- name: Add wafw00f history commands
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_history.d/wafw00f.history"
+    content: |
+      wafw00f $TARGET
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"

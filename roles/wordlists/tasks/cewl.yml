@@ -1,0 +1,35 @@
+---
+- name: Clone CeWL repository
+  ansible.builtin.git:
+    repo: https://github.com/digininja/CeWL.git
+    dest: /opt/tools/CeWL
+    depth: 1
+    version: master
+  become: yes
+
+- name: Create CeWL gemset and install dependencies
+  ansible.builtin.shell:
+    cmd: |
+      /usr/local/rvm/bin/rvm 3.1.2@cewl --create do gem install mime mime-types mini_exiftool nokogiri rubyzip spider
+      /usr/local/rvm/bin/rvm 3.1.2@cewl --create do bundle install --gemfile /opt/tools/CeWL/Gemfile
+  become: yes
+  args:
+    creates: /opt/tools/CeWL/Gemfile.lock
+
+- name: Create CeWL aliases
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_aliases.d/cewl.zsh"
+    content: |
+      alias cewl='/usr/local/rvm/gems/ruby-3.1.2@cewl/wrappers/ruby /opt/tools/CeWL/cewl.rb'
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+
+- name: Add CeWL history commands
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_history.d/cewl.history"
+    content: |
+      cewl --depth 10 --with-numbers --write cewl.txt "$TARGET"
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"

@@ -1,0 +1,50 @@
+---
+- name: Load common defaults
+  ansible.builtin.include_vars:
+    file: ../../common/defaults/main.yml
+
+- name: Install cracking tools through apt
+  ansible.builtin.apt:
+    name: "{{ cracking_apt_packages }}"
+    state: present
+    install_recommends: no
+  become: yes
+
+- name: Create cracking history drop-ins
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_history.d/{{ item.filename }}.history"
+    content: "{{ item.content }}"
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+  loop:
+    - filename: hashcat
+      content: |
+        hashcat --hash-type 1000 --potfile-path "$DOMAIN".ntds.cracked "$DOMAIN".ntds --show --username                                                          │
+        hashcat --hash-type 16800 --attack-mode 0 dump_WPA-PMKID-PBKDF2.hashcat `fzf-wordlists`                                                                  │
+        hashcat --hash-type 22000 --attack-mode 0 dump_WPA-PBKDF2-PMKID_EAPOL.hashcat `fzf-wordlists`                                                            │
+        hashcat --hash-type 0 --attack-mode 0 --username MD5_hashes.txt `fzf-wordlists`                                                                          │
+        hashcat --hash-type 2100 --attack-mode 0 '$DCC2$10240#user#bb38628253e7681553b72e7da3adf305' `fzf-wordlists`                                             │
+        hashcat --hash-type 1000 --attack-mode 0 --username "$DOMAIN".ntds `fzf-wordlists`                                                                       │
+        hashcat --hash-type 13100 --attack-mode 0 Kerberoastables.txt `fzf-wordlists`                                                                            │
+        hashcat --hash-type 18200 --attack-mode 0 ASREProastables.txt `fzf-wordlists`                                                                            │
+        hcat '$DCC2$10240#user#bb38628253e7681553b72e7da3adf305'                                                                                                 │
+        hcat Kerberoastables.txt 
+
+    - filename: fcrackzip
+      content: |
+        fcrackzip -u -v -D -p `fzf-wordlists` file.zip
+
+    - filename: pdfcrack
+      content: |
+        pdfcrack -f file.pdf
+
+    - filename: bruteforce-luks
+      content: |
+        bruteforce-luks -t 4 -l 5 -m 5 /dev/sdb1
+
+- name: Install John the Ripper
+  ansible.builtin.include_tasks: john.yml
+
+- name: Install Name That Hash
+  ansible.builtin.include_tasks: name_that_hash.yml

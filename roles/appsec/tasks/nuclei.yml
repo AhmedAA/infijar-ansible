@@ -1,0 +1,33 @@
+---
+- name: Install Nuclei using Go (via asdf)
+  ansible.builtin.shell:
+    executable: /bin/bash
+    cmd: |
+      export PATH="/opt/tools/bin:$PATH"
+      asdf exec go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
+      asdf reshim golang
+  args:
+    creates: "{{ target_user_home }}/.asdf/shims/nuclei"
+  become: yes
+  become_user: "{{ target_user }}"
+
+- name: Update Nuclei templates
+  ansible.builtin.shell:
+    executable: /bin/bash
+    cmd: |
+      export PATH="/opt/tools/bin:{{ target_user_home }}/.asdf/shims:$PATH"
+      nuclei -update-templates
+  args:
+    creates: "{{ target_user_home }}/nuclei-templates/README.md"
+  become: yes
+  become_user: "{{ target_user }}"
+
+- name: Add Nuclei history commands
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_history.d/nuclei.history"
+    content: |
+      nuclei -u $TARGET
+      nuclei -l urls.txt -t cves/ -o results.txt
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"

@@ -1,0 +1,54 @@
+---
+- name: Include system update and base package setup
+  ansible.builtin.include_tasks: base_packages.yml
+
+- name: Install core packages for container
+  ansible.builtin.include_tasks: container.yml
+  when: container | bool
+
+- name: Install core packages for VM
+  ansible.builtin.include_tasks: vm.yml
+  when: not (container | bool)
+
+- name: Install build dependencies
+  ansible.builtin.include_tasks: build_deps.yml
+
+- name: Setup shell
+  ansible.builtin.include_tasks: shell.yml
+
+- name: Include file system setup
+  ansible.builtin.include_tasks: filesystem.yml
+
+- name: Setup locales
+  ansible.builtin.include_tasks: locales.yml
+
+- name: Include fzf setup
+  ansible.builtin.include_tasks: fzf.yml
+
+- name: Include ASDF setup
+  ansible.builtin.include_tasks: asdf.yml
+
+- name: Include Rust and Cargo setup
+  ansible.builtin.include_tasks: rust.yml
+
+- name: Include golang setup
+  ansible.builtin.include_tasks: golang.yml
+
+- name: Include Ruby (rvm) setup
+  ansible.builtin.include_tasks: ruby.yml
+
+- name: Include Python setup
+  ansible.builtin.include_tasks: python.yml
+
+- name: Include core tools setup
+  ansible.builtin.include_tasks: core_tools.yml
+
+- name: Include nerd font setup
+  ansible.builtin.include_tasks: fonts.yml
+
+- name: Include OpenVPN setup
+  ansible.builtin.include_tasks: vpn.yml
+
+- name: Include desktop setup
+  ansible.builtin.include_tasks: desktop.yml
+  when: desktop | bool

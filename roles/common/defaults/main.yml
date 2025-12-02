@@ -1,0 +1,51 @@
+---
+# User configuration
+# To build for a 'kali' user instead, you would override these
+# in your playbook.yml or command line:
+# e.g., ansible-playbook ... -e "target_user=kali" -e "target_user_home=/home/kali"
+target_user: "root"
+target_user_home: "/root"
+
+rvm_default_ruby: "3.2.2"
+rvm_additional_rubies:
+  - "3.1.2" # needed by cewl, pass-station, evil-winrm
+  - "3.1.5" # needed by metasploit-framework
+
+pyenv_root: "/opt/tools/pyenv"
+pyenv_python_versions:
+  - "3.11.9"
+  - "3.13.0"
+  - "3.10.13"
+  - "2.7.18"
+pyenv_global: "3.11.9 3.13.0 3.10.13 2.7.18"
+
+burp_community: true
+burp_pro: false
+
+build_dependencies:
+  - build-essential
+  - clang
+  - pkg-config
+  - libssl-dev
+  - libreadline-dev
+  - libsqlite3-dev
+  - libncurses5-dev
+  - libncursesw5-dev
+  - libffi-dev
+  - liblzma-dev
+  - libbz2-dev
+  - zlib1g-dev
+  - libxml2-dev
+  - libxmlsec1-dev
+  - tk-dev
+  - libgdbm-dev
+  - libyaml-dev
+  - gawk
+  - bison
+
+# Install guest additions etc
+vm_packages:
+  - TODO
+
+container_packages:
+  - tzdata

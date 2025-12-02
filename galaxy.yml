@@ -1,0 +1,14 @@
+namespace: infijar
+
+name: offsec
+
+version: 1.0.0
+
+readme: README.md
+
+authors:
+- AhmedAA
+
+description: Collection to install various offensive security tools.
+
+repository: https://github.com/AhmedAA/infijar-ansible

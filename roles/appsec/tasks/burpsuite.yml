@@ -1,0 +1,102 @@
+---
+- name: Detect latest Burp Suite version
+  ansible.builtin.shell:
+    cmd: curl -s "https://portswigger.net/burp/releases#community" | grep -P -o "\d{4}-\d-\d{1,2}" | head -1 | tr - .
+  register: burp_version_output
+  changed_when: false
+
+- name: Set Burp Version fact
+  ansible.builtin.set_fact:
+    burp_version: "{{ burp_version_output.stdout }}"
+
+- name: Create base Burp directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+  loop:
+    - "{{ target_user_home }}/.BurpSuite"
+    - /opt/tools/bin
+  become: yes
+
+- name: Install Burp Suite Community
+  block:
+    - name: Create Community Directory
+      ansible.builtin.file:
+        path: /opt/tools/BurpSuiteCommunity
+        state: directory
+        mode: '0755'
+        owner: "{{ target_user }}"
+        group: "{{ target_user }}"
+
+    - name: Download Burp Suite Community JAR
+      ansible.builtin.get_url:
+        url: "https://portswigger.net/burp/releases/download?product=community&version={{ burp_version }}&type=Jar"
+        dest: /opt/tools/BurpSuiteCommunity/BurpSuiteCommunity.jar
+        mode: '0644'
+
+    - name: Deploy User Configs
+      ansible.builtin.copy:
+        src: burpsuite/UserConfig.json
+        dest: "{{ target_user_home }}/.BurpSuite/UserConfig.json"
+        owner: "{{ target_user }}"
+        group: "{{ target_user }}"
+        mode: '0644'
+      ignore_errors: yes
+
+    - name: Create Burp Community Alias
+      ansible.builtin.copy:
+        dest: "{{ target_user_home }}/.zsh_aliases.d/burp-community.zsh"
+        content: |
+          # Burp Suite Community
+          alias burpsuite='/usr/lib/jvm/java-21-openjdk-amd64/bin/java -jar -Xmx4g /opt/tools/BurpSuiteCommunity/BurpSuiteCommunity.jar'
+        mode: '0644'
+        owner: "{{ target_user }}"
+  become: yes
+  when: burp_community | bool
+
+- name: Install Burp Suite Professional
+  block:
+    - name: Create Pro Directory
+      ansible.builtin.file:
+        path: /opt/tools/BurpSuitePro
+        state: directory
+        mode: '0755'
+        owner: "{{ target_user }}"
+        group: "{{ target_user }}"
+
+    - name: Download Burp Suite Professional JAR
+      ansible.builtin.get_url:
+        url: "https://portswigger.net/burp/releases/download?product=pro&version={{ burp_version }}&type=Jar"
+        dest: /opt/tools/BurpSuitePro/BurpSuitePro.jar
+        mode: '0644'
+
+    - name: Deploy User Configs (Pro)
+      ansible.builtin.copy:
+        src: burpsuite/UserConfig.json
+        dest: "{{ target_user_home }}/.BurpSuite/UserConfig.json"
+        owner: "{{ target_user }}"
+        group: "{{ target_user }}"
+        mode: '0644'
+      ignore_errors: yes
+
+    - name: Create Burp Pro Alias
+      ansible.builtin.copy:
+        dest: "{{ target_user_home }}/.zsh_aliases.d/burp-pro.zsh"
+        content: |
+          # Burp Suite Professional
+          alias burpsuite='/usr/lib/jvm/java-21-openjdk-amd64/bin/java -jar -Xmx4g /opt/tools/BurpSuitePro/BurpSuitePro.jar'
+        mode: '0644'
+        owner: "{{ target_user }}"
+  become: yes
+  when: burp_pro | bool
+
+- name: Add Burp History
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_history.d/burpsuite.history"
+    content: |
+      burpsuite &> /dev/null &
+    mode: '0644'
+    owner: "{{ target_user }}"

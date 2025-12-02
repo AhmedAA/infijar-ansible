@@ -1,0 +1,39 @@
+---
+- name: Clone DefaultCreds-cheat-sheet repository
+  ansible.builtin.git:
+    repo: https://github.com/ihebski/DefaultCreds-cheat-sheet.git
+    dest: /opt/tools/DefaultCreds-cheat-sheet
+    depth: 1
+    version: main
+  become: yes
+
+# 2. Install Requirements
+- name: Install Python requirements
+  ansible.builtin.shell:
+    cmd: "{{ pyenv_root }}/versions/{{ pyenv_python_versions[0] }}/bin/pip install -r requirements.txt"
+    chdir: /opt/tools/DefaultCreds-cheat-sheet
+  become: yes
+  ignore_errors: yes
+
+- name: Create 'default-creds' wrapper script
+  ansible.builtin.copy:
+    dest: /opt/tools/bin/creds
+    mode: '0755'
+    content: |
+      #!/bin/bash
+      # Wrapper to run DefaultCreds from its own directory
+      cd /opt/tools/DefaultCreds-cheat-sheet
+      
+      # Use the specific python version we installed deps into
+      {{ pyenv_root }}/versions/{{ pyenv_python_versions[0] }}/bin/python3 creds "$@"
+  become: yes
+
+- name: Add DefaultCreds history commands
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_history.d/default_creds.history"
+    content: |
+      creds update
+      creds search tomcat
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"

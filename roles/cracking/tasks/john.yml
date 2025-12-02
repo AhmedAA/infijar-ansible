@@ -1,0 +1,53 @@
+---
+- name: Install JtR dependencies
+  ansible.builtin.apt:
+    name:
+      - libssl-dev
+      - zlib1g-dev
+      - yasm
+      - libgmp-dev
+      - libpcap-dev
+      - libbz2-dev
+      - libcompress-raw-lzma-perl
+    state: present
+    install_recommends: no
+  become: yes
+
+- name: Clone John the Ripper repository
+  ansible.builtin.git:
+    repo: https://github.com/openwall/john.git
+    dest: /opt/tools/john
+    depth: 1
+    version: bleeding-jumbo
+  become: yes
+
+- name: Build John the Ripper
+  ansible.builtin.shell:
+    cmd: ./configure --disable-native-tests && make -s clean && make -j$(nproc)
+    chdir: /opt/tools/john/src
+  args:
+    creates: /opt/tools/john/run/john
+  become: yes
+
+- name: Add John binaries to PATH
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zshrc.d/john.zsh"
+    content: |
+      # John the Ripper
+      export PATH="$PATH:/opt/tools/john/run"
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+
+- name: Add John history commands
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_history.d/john.history"
+    content: |
+      john --format=NT --wordlist=/usr/share/wordlists/rockyou.txt --fork=10 HashToPwn.txt --rules=all                                                         │
+      john --format=krb5tgs --wordlist=`fzf-wordlists` Kerberoastables.txt                                                                                     │
+      john --wordlist=`fzf-wordlists` ASREProastables.txt                                                                                                      │
+      hjohn ASREProastables.txt                                                                                                                                │
+      hjohn '$DCC2$10240#user#bb38628253e7681553b72e7da3adf305'
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"

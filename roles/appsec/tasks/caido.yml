@@ -1,0 +1,70 @@
+---
+- name: Install Caido dependencies
+  ansible.builtin.apt:
+    name:
+      - libxss1
+      - libgbm1
+      - libnss3
+      - libasound2t64
+    state: present
+    install_recommends: no
+  become: yes
+
+- name: Create Caido directory
+  ansible.builtin.file:
+    path: /opt/tools/caido
+    state: directory
+    mode: '0755'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+  become: yes
+
+- name: Fetch Caido release metadata
+  ansible.builtin.uri:
+    url: https://api.caido.io/releases/latest
+    return_content: yes
+  register: caido_meta
+
+- name: Parse download URLs from metadata
+  ansible.builtin.set_fact:
+    caido_deb_url: >-
+      {{ caido_meta.json.links 
+         | selectattr('link', 'search', 'linux-' + ansible_architecture + '\.deb$') 
+         | map(attribute='link') 
+         | first }}
+    caido_cli_url: >-
+      {{ caido_meta.json.links 
+         | selectattr('link', 'search', 'caido-cli-.*-linux-' + ansible_architecture + '\.tar\.gz$') 
+         | map(attribute='link') 
+         | first }}
+
+- name: Download Caido Desktop .deb
+  ansible.builtin.get_url:
+    url: "{{ caido_deb_url }}"
+    dest: "/opt/tools/caido/caido_latest.deb"
+    mode: '0644'
+  become: yes
+
+- name: Install Caido Desktop via apt
+  ansible.builtin.apt:
+    deb: "/opt/tools/caido/caido_latest.deb"
+    state: present
+  become: yes
+
+- name: Install Caido CLI
+  ansible.builtin.unarchive:
+    src: "{{ caido_cli_url }}"
+    dest: /opt/tools/bin
+    remote_src: yes
+    mode: '0755'
+    creates: /opt/tools/bin/caido-cli
+  become: yes
+
+- name: Add Caido history commands
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_history.d/caido.history"
+    content: |
+      caido --no-sandbox &> /dev/null &
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"

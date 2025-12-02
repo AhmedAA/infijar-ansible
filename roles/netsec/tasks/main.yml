@@ -1,0 +1,113 @@
+---
+- name: Load common defaults
+  ansible.builtin.include_vars:
+    file: ../../common/defaults/main.yml
+
+# Wireshark asks if non-root users should be able to capture packets.
+# We pre-answer 'yes' to prevent the build from hanging.
+- name: Pre-configure Wireshark (debconf)
+  ansible.builtin.debconf:
+    name: wireshark-common
+    question: wireshark-common/install-setuid
+    vtype: boolean
+    value: 'true'
+  become: yes
+
+- name: Install Network Security tools (APT)
+  ansible.builtin.apt:
+    name: "{{ netsec_apt_packages }}"
+    state: present
+    install_recommends: no
+  become: yes
+
+- name: Create Netsec history drop-ins
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_history.d/{{ item.filename }}.history"
+    content: "{{ item.content }}"
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+  loop:
+    - filename: tshark
+      content: |
+        tshark -i eth0 -w capture.pcap
+        tshark -r capture.pcap
+        tshark -F pcap -r capture.pcapng -w capture.pcap
+
+    - filename: hping3
+      content: |
+        hping3 $TARGET
+
+    - filename: nmap
+      content: |
+        nmap --script 'smb-enum*' --script-args unsafe=1 -T5 "$TARGET"
+        nmap --script broadcast-dhcp-discover
+        nmap --script dns-srv-enum --script-args dns-srv-enum.domain="$DOMAIN"
+        nmap --script http-ntlm-info --script-args http-ntlm-info.root=/ews/ -p 443 mx.example.com
+        nmap --script smb-enum-shares -p 139,445 -T4 -Pn "$TARGET"
+        nmap --script=ldap-search -p 389 "$TARGET"
+        nmap -Pn -v -sS -F "$TARGET"
+        nmap -p 5900 --script=realvnc-auth-bypass "$TARGET"
+        nmap -sC -sV -p 139,445,80,21 "$TARGET"
+        nmap -sS -n --open -p 88 "$TARGET"
+        nmap -sS -p 3268,3269 "$TARGET"
+        nmap -sU --min-rate 5000 -p- $TARGET
+        nmap -sCV -v -O -p- $TARGET -oN OUTPUT
+
+    - filename: masscan
+      content: |
+        masscan -v -p 1-65535 --rate=10000 -e "$INTERFACE" 192.168.56.0/24
+        masscan -v -p 1-65535,U:1-65535 --rate=10000 -e "$INTERFACE" 192.168.56.0/24
+
+    - filename: netdiscover
+      content: |
+        netdiscover -p
+        netdiscover -i "$INTERFACE" -r 192.168.1.0/24
+
+    - filename: tcpdump
+      content: |
+        tcpdump -i eth0 -w capture.pcap
+
+    - filename: iptables
+      content: |
+        iptables -L
+
+    - filename: traceroute
+      content: |
+        traceroute $TARGET
+
+    - filename: rdesktop
+      content: |
+        rdesktop -u USER -p PASSWORD -d DOMAIN
+
+    - filename: hydra
+      content: |
+        hydra -l USER -P passwords.txt -s PORT -f $TARGET http-get /admin
+
+    - filename: xfreerdp
+      content: |
+        xfreerdp3 /d:"DOMAIN" /u:"USER" /pth:"NT_HASH" /v:"$TARGET" /cert-ignore /dynamic-resolution
+        xfreerdp3 /d:"DOMAIN" /u:"USER" /pth:"NT_HASH" /v:"$TARGET" /cert-ignore /drive:"SHARENAME,LOCALPATH" /dynamic-resolution
+        xfreerdp3 /d:"DOMAIN" /u:"USER" /p:"PASSWORD" /v:"$TARGET" /cert-ignore /dynamic-resolution
+        xfreerdp3 /d:"DOMAIN" /u:"USER" /p:"PASSWORD" /v:"$TARGET" /cert-ignore /drive:"SHARENAME,LOCALPATH" /dynamic-resolution
+
+    - filename: mitmproxy
+      content: |
+        mitmproxy
+        mitmproxy --listen-host "HOST" --listen-port "PORT"
+
+- name: Create Netsec aliases drop-ins
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_aliases.d/{{ item.filename }}.zsh"
+    content: "{{ item.content }}"
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+  loop:
+    - filename: nmap
+      content: |
+        alias scan-range='nmap -T5 -n -sn'
+        alias nse='ls /usr/share/nmap/scripts | grep '
+
+- name: Include Chisel setup
+  ansible.builtin.include_tasks: chisel.yml

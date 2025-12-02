@@ -1,0 +1,82 @@
+---
+- name: Install ruby
+  ansible.builtin.apt:
+    name:
+      - ruby
+      - ruby-dev
+      - ruby-full
+      - bundler
+      - gem
+    state: present
+    install_recommends: no
+  become: yes
+
+- name: Import RVM GPG keys
+  ansible.builtin.command:
+    cmd: gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB
+  register: gpg_import
+  changed_when: "'imported: 0' not in gpg_import.stderr"
+  become: yes
+
+- name: Download RVM installer
+  ansible.builtin.get_url:
+    url: https://get.rvm.io
+    dest: /tmp/rvm.sh
+    mode: '0755'
+
+- name: Install RVM Base
+  ansible.builtin.shell:
+    cmd: bash /tmp/rvm.sh stable --autolibs=0
+  args:
+    creates: /usr/local/rvm/bin/rvm
+  become: yes
+
+- name: Configure RVM settings
+  ansible.builtin.command:
+    cmd: "{{ item }}"
+  loop:
+    - /usr/local/rvm/bin/rvm autolibs disable #read-fail
+    - /usr/local/rvm/bin/rvm rvmrc warning ignore allGemfiles
+  become: yes
+  changed_when: false
+
+- name: Install Default Ruby
+  ansible.builtin.shell:
+    cmd: /usr/local/rvm/bin/rvm install ruby-{{ rvm_default_ruby }}
+  args:
+    creates: "/usr/local/rvm/rubies/ruby-{{ rvm_default_ruby }}"
+  become: yes
+
+- name: Install additional Ruby versions
+  ansible.builtin.shell:
+    cmd: |
+      export CC=clang
+      export CXX=clang++
+
+      /usr/local/rvm/bin/rvm install ruby-{{ item }}
+  loop: "{{ rvm_additional_rubies }}"
+  args:
+    creates: "/usr/local/rvm/rubies/ruby-{{ item }}"
+  become: yes
+
+- name: Set default Ruby version
+  ansible.builtin.command:
+    cmd: /usr/local/rvm/bin/rvm use {{ rvm_default_ruby }} --default
+  become: yes
+  changed_when: false
+
+- name: RVM Cleanup
+  ansible.builtin.command:
+    cmd: /usr/local/rvm/bin/rvm cleanup all
+  become: yes
+  changed_when: false
+
+- name: Configure RVM in shell environment
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zshrc.d/20-rvm.zsh"
+    content: |
+      export PATH="$PATH:$HOME/.rvm/bin"
+      [[ -s "/usr/local/rvm/scripts/rvm" ]] && source "/usr/local/rvm/scripts/rvm"
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"

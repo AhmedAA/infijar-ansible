@@ -1,0 +1,55 @@
+---
+- name: Set Python 2 facts
+  ansible.builtin.set_fact:
+    py2_version: "{{ pyenv_python_versions | select('match', '^2') | first }}"
+
+- name: Clone NoSQLMap repository
+  ansible.builtin.git:
+    repo: https://github.com/codingo/NoSQLMap.git
+    dest: /opt/tools/NoSQLMap
+    depth: 1
+    version: master
+  become: yes
+
+- name: Downgrade requests version in setup.py
+  ansible.builtin.replace:
+    path: /opt/tools/NoSQLMap/setup.py
+    regexp: 'requests==2\.32\.4'
+    replace: 'requests==2.27.1'
+  become: yes
+
+- name: Create Python 2 virtualenv for NoSQLMap
+  ansible.builtin.shell:
+    cmd: "{{ pyenv_root }}/versions/{{ py2_version }}/bin/python -m virtualenv /opt/tools/NoSQLMap/venv"
+  args:
+    creates: /opt/tools/NoSQLMap/venv/bin/activate
+  become: yes
+
+- name: Install NoSQLMap
+  ansible.builtin.shell:
+    cmd: "/opt/tools/NoSQLMap/venv/bin/python setup.py install"
+    chdir: /opt/tools/NoSQLMap
+  become: yes
+  args:
+    creates: /opt/tools/NoSQLMap/venv/bin/nosqlmap
+
+- name: Remove conflicting certifi egg
+  ansible.builtin.file:
+    path: /opt/tools/NoSQLMap/venv/lib/python2.7/site-packages/certifi-2023.5.7-py2.7.egg
+    state: absent
+  become: yes
+
+- name: Install specific certifi version
+  ansible.builtin.shell:
+    cmd: "/opt/tools/NoSQLMap/venv/bin/pip install certifi==2018.10.15"
+  become: yes
+
+- name: Create NoSQLMap aliases
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_aliases.d/nosqlmap.zsh"
+    content: |
+      # Executes using the isolated Python 2 virtual environment
+      alias nosqlmap="/opt/tools/NoSQLMap/venv/bin/python /opt/tools/NoSQLMap/nosqlmap.py"
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"

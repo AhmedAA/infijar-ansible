@@ -1,0 +1,4 @@
+---
+wordlist_apt_packages:
+  - crunch
+  - cupp

@@ -1,0 +1,33 @@
+---
+- name: Download Hashcat Rules
+  ansible.builtin.get_url:
+    url: "https://github.com/{{ item.owner }}/{{ item.repo }}/raw/{{ item.branch | default('master') }}/{{ item.path }}"
+    dest: "/opt/rules/{{ item.path | basename }}"
+    mode: '0644'
+  loop:
+    # --- NSAKEY Rules ---
+    - { owner: 'NSAKEY', repo: 'nsa-rules', path: '_NSAKEY.v1.dive.rule' }
+    - { owner: 'NSAKEY', repo: 'nsa-rules', path: '_NSAKEY.v2.dive.rule' }
+
+    # --- Hob0Rules ---
+    - { owner: 'praetorian-inc', repo: 'Hob0Rules', path: 'd3adhob0.rule' }
+    - { owner: 'praetorian-inc', repo: 'Hob0Rules', path: 'hob064.rule' }
+
+    # --- OneRuleToRuleThemStill ---
+    - { owner: 'stealthsploit', repo: 'OneRuleToRuleThemStill', branch: 'main', path: 'OneRuleToRuleThemStill.rule' }
+
+    # --- Pantagrule Rules ---
+    - { owner: 'rarecoil', repo: 'pantagrule', path: 'rules/hashesorg.v6/pantagrule.hashorg.v6.hybrid.rule.gz' }
+    - { owner: 'rarecoil', repo: 'pantagrule', path: 'rules/hashesorg.v6/pantagrule.hashorg.v6.one.rule.gz' }
+    - { owner: 'rarecoil', repo: 'pantagrule', path: 'rules/hashesorg.v6/pantagrule.hashorg.v6.popular.rule.gz' }
+    - { owner: 'rarecoil', repo: 'pantagrule', path: 'rules/hashesorg.v6/pantagrule.hashorg.v6.random.rule.gz' }
+    - { owner: 'rarecoil', repo: 'pantagrule', path: 'rules/hashesorg.v6/pantagrule.hashorg.v6.raw1m.rule.gz' }
+    - { owner: 'rarecoil', repo: 'pantagrule', path: 'rules/private.hashorg.royce/pantagrule.popular.royce.rule.gz' }
+    - { owner: 'rarecoil', repo: 'pantagrule', path: 'rules/private.hashorg.royce/pantagrule.hybrid.royce.rule.gz' }
+    - { owner: 'rarecoil', repo: 'pantagrule', path: 'rules/private.hashorg.royce/pantagrule.one.royce.rule.gz' }
+    - { owner: 'rarecoil', repo: 'pantagrule', path: 'rules/private.hashorg.royce/pantagrule.random.royce.rule.gz' }
+    - { owner: 'rarecoil', repo: 'pantagrule', path: 'rules/private.v5/pantagrule.private.v5.hybrid.rule.gz' }
+    - { owner: 'rarecoil', repo: 'pantagrule', path: 'rules/private.v5/pantagrule.private.v5.one.gz' }
+    - { owner: 'rarecoil', repo: 'pantagrule', path: 'rules/private.v5/pantagrule.private.v5.popular.rule.gz' }
+    - { owner: 'rarecoil', repo: 'pantagrule', path: 'rules/private.v5/pantagrule.private.v5.random.rule.gz' }
+  become: yes

@@ -1,0 +1,19 @@
+---
+netsec_apt_packages:
+  - wireshark
+  - tshark
+  - hping3
+  - nmap
+  - masscan
+  - netdiscover
+  - tcpdump
+  - iptables
+  - traceroute
+  - dns2tcp
+  - freerdp3-x11
+  - rdesktop
+  - xtightvncviewer
+  - hydra
+  - mariadb-client
+  - redis-tools
+  - mitmproxy

@@ -1,0 +1,205 @@
+---
+- name: Configure Debian Testing Sources
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/debian.sources
+    content: |
+      Types: deb
+      URIs: http://deb.debian.org/debian
+      Suites: testing
+      Components: main contrib non-free non-free-firmware
+      Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+      
+      Types: deb
+      URIs: http://security.debian.org/debian-security
+      Suites: testing-security
+      Components: main contrib non-free non-free-firmware
+      Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+    mode: '0644'
+  become: yes
+
+- name: Add Debian Sid to sources
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/sid-debian.sources
+    content: |
+      Types: deb
+      URIs: http://deb.debian.org/debian
+      Suites: unstable
+      Components: main contrib non-free non-free-firmware
+      Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+    mode: '0644'
+  become: yes
+
+- name: Configure APT Pinning
+  ansible.builtin.copy:
+    dest: /etc/apt/preferences.d/99-hybrid-pinning
+    content: |
+      # Priority 900: Always prefer Testing packages
+      Package: *
+      Pin: release a=testing
+      Pin-Priority: 900
+
+      # Priority 200: Only install Unstable if explicitly requested
+      # or if the package doesn't exist in Testing.
+      Package: *
+      Pin: release a=unstable
+      Pin-Priority: 200
+    mode: '0644'
+  become: yes
+
+- name: Update apt cache and install utils
+  ansible.builtin.apt:
+    update_cache: yes
+    name:
+      - apt-utils
+      - dialog
+    state: present
+    install_recommends: no
+  become: yes
+
+- name: Upgrade all packages
+  ansible.builtin.apt:
+    upgrade: yes
+  become: yes
+
+- name: Install base packages
+  ansible.builtin.apt:
+    update_cache: yes
+    name:
+      - starship
+      - git
+      - curl
+      - wget
+      - iproute2
+      - build-essential
+      - net-tools
+      - nfs-common
+      - "cifs-utils"
+      - ca-certificates
+      - whois
+      - fzf
+      - bat
+      - eza
+      - zoxide
+      - fd-find
+      - atool
+      - hexyl
+      - httpie
+      - ripgrep
+      - rlwrap
+      - man
+      - subversion
+      - lsb-release
+      - pciutils
+      - pkg-config
+      - zip
+      - unzip
+      - kmod
+      - gnupg2
+      - libffi-dev
+      - zsh
+      - asciinema
+      - automake
+      - autoconf
+      - make
+      - cmake
+      - time
+      - gcc
+      - g++
+      - file
+      - lsof
+      - less
+      - x11-apps
+      - nano
+      - jq
+      - iputils-ping
+      - iproute2
+      - tidy
+      - plocate
+      - libtool
+      - dos2unix
+      - ftp
+      - sshpass
+      - telnet
+      - nfs-common
+      - ncat
+      - netcat-traditional
+      - socat
+      - rdate
+      - 7zip
+      - rar
+      - unrar
+      - xz-utils
+      - xsltproc
+      - parallel
+      - tree
+      - nim
+      - perl
+      - libwww-perl
+      - openjdk-21-jdk
+      - tldr-py
+      - libxml2-utils
+      - virtualenv
+      - chromium
+      - libsasl2-dev
+      - libldap2-dev
+      - libssl-dev
+      - isc-dhcp-client
+      - sqlite3
+      - dnsutils
+      - samba
+      - ssh
+      - snmp
+      - faketime
+      - python3
+      - python3-dev
+      - grc
+      - vim
+      - xsel
+      - xxd
+      - libnss3-tools
+      - htop
+      - procps
+
+      # - npm
+      # - gem
+
+      # - net-tools
+
+      # - vim
+
+      # - putty
+      # - screen
+
+      # - ruby
+      # - ruby-dev
+      # - ruby-full
+      # - bundler
+
+      # - logrotate
+      # - tmux
+
+      # - bat
+
+      # - php
+      # - ripgrep
+      # - python3
+      # - python3-pip
+      # - python3-venv
+      # - python3-setuptools
+      # - bloodhound
+      # - seclists
+      # - feroxbuster
+      # - gobuster
+      # - impacket-scripts
+      # - python3-impacket
+      # - golang
+    state: present
+    install_recommends: no
+
+# - name: Autoremove unneeded packages
+#   ansible.builtin.apt:
+#     autoremove: yes
+
+# - name: Clean apt package cache
+#   ansible.builtin.apt:
+#     clean: yes

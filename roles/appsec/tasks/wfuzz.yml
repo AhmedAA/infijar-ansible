@@ -1,0 +1,85 @@
+---
+- name: Remove conflicting system packages
+  ansible.builtin.apt:
+    name: python3-pycurl
+    state: absent
+    purge: yes
+  become: yes
+
+- name: Install Wfuzz build dependencies
+  ansible.builtin.apt:
+    name:
+      - libcurl4-openssl-dev
+      - libssl-dev
+    state: present
+    install_recommends: no
+  become: yes
+
+- name: Clone wfuzz repository
+  ansible.builtin.git:
+    repo: https://github.com/xmendez/wfuzz.git
+    dest: /tmp/wfuzz
+    depth: 1
+    version: master
+  become: yes
+
+- name: Patch pyparsing version in setup.py
+  ansible.builtin.replace:
+    path: /tmp/wfuzz/setup.py
+    regexp: 'pyparsing>=2.4\*;'
+    replace: 'pyparsing>=2.4.2;'
+  become: yes
+
+- name: Install pycurl via primary Python
+  ansible.builtin.shell:
+    cmd: "export PYCURL_SSL_LIBRARY=openssl && {{ pyenv_root }}/versions/{{ pyenv_python_versions[0] }}/bin/pip install pycurl"
+  become: yes
+  register: pycurl_install
+  changed_when: "'Requirement already satisfied' not in pycurl_install.stdout"
+
+- name: Install wfuzz from source
+  ansible.builtin.shell:
+    cmd: "{{ pyenv_root }}/versions/{{ pyenv_python_versions[0] }}/bin/pip install /tmp/wfuzz/"
+  become: yes
+  register: wfuzz_install
+  changed_when: "'Requirement already satisfied' not in wfuzz_install.stdout"
+
+- name: Create wfuzz wordlist directory
+  ansible.builtin.file:
+    path: /usr/share/wfuzz
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Move wordlists to system share
+  ansible.builtin.shell:
+    cmd: mv /tmp/wfuzz/wordlist/* /usr/share/wfuzz/
+    removes: /tmp/wfuzz/wordlist
+  become: yes
+  ignore_errors: yes
+
+- name: Clean up temporary build directory
+  ansible.builtin.file:
+    path: /tmp/wfuzz
+    state: absent
+  become: yes
+
+- name: Add Wfuzz history commands
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_history.d/wfuzz.history"
+    content: |
+      wfuzz --hc 401 -c -v -w /usr/share/seclists/Usernames/top-usernames-shortlist.txt -w /usr/share/seclists/Passwords/darkweb2017-top100.txt --basic "FUZZ:FUZ2Z" -u "http://$TARGET/secretpage"
+      wfuzz --hc 403,404 -c -w /usr/share/seclists/Discovery/Web-Content/big.txt -w /usr/share/seclists/Discovery/Web-Content/web-extensions.txt -u "http://$TARGET/FUZZFUZ2Z"
+      wfuzz --hh 185 -c -w `fzf-wordlists` -H 'Host: FUZZ.machine.org' -u "http://$TARGET/"
+      wfuzz --hh 185 -c -w `fzf-wordlists` -H 'Host: FUZZ.org' -u "http://$TARGET/"
+      wfuzz -c --hw 157 -L -w `fzf-wordlists` -w `fzf-wordlists` -X POST -d 'username=FUZZ&password=FUZ2Z' -u "http://$TARGET/admin"
+      wfuzz -c --hw 157 -L -w `fzf-wordlists` -w `fzf-wordlists` -X POST -d 'username=FUZZ&password=FUZ2Z' -u http://192.168.10.10/admin
+      wfuzz --hc 401 -c -v -w /usr/share/seclists/Usernames/top-usernames-shortlist.txt -w /usr/share/seclists/Passwords/darkweb2017-top100.txt --basic FUZZ:FUZ2Z -u http://192.168.10.10/secretpage
+      wfuzz --hc 403,404 -c -w /usr/share/seclists/Discovery/Web-Content/big.txt -w /usr/share/seclists/Discovery/Web-Content/web-extensions.txt -u http://192.168.10.10/FUZZFUZ2Z
+      wfuzz -c -w `fzf-wordlists` -w /usr/share/wordlists/wfuzz/general/extensions_common.txt --hc 401,404 -f OUTPUT_FILE,raw -t 150 http://192.168.10.10/FUZZFUZ2Z
+      wfuzz -c -w `fzf-wordlists` -z list,php-html-txt --hc 401,404 -f OUTPUT_FILE,raw -t 150 http://192.168.10.29/FUZZ.FUZ2Z
+      wfuzz --hh 185 -c -w `fzf-wordlists` -H "Host: FUZZ.machine.org" -u http://192.168.10.10/
+      wfuzz --hh 185 -c -w `fzf-wordlists` -H "Host: FUZZ.org" -u http://192.168.10.10
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"

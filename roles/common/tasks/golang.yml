@@ -1,0 +1,33 @@
+---
+- name: Add Golang plugin to asdf
+  ansible.builtin.shell:
+    cmd: /opt/tools/bin/asdf plugin add golang https://github.com/asdf-community/asdf-golang.git
+  register: asdf_plugin_add
+  failed_when: asdf_plugin_add.rc != 0 and "already added" not in asdf_plugin_add.stderr
+  changed_when: asdf_plugin_add.rc == 0
+  become: yes
+  become_user: "{{ target_user }}"
+
+- name: Install specific Golang versions
+  ansible.builtin.command:
+    cmd: /opt/tools/bin/asdf install golang latest
+  become: yes
+  become_user: "{{ target_user }}"
+
+- name: Set global Golang version
+  ansible.builtin.command:
+    cmd: /opt/tools/bin/asdf set --home golang latest
+  become: yes
+  become_user: "{{ target_user }}"
+
+- name: Configure Go environment variables in shell
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zshrc.d/20-go.zsh"
+    content: |
+      # golang configuration
+      source ~/.asdf/plugins/golang/set-env.zsh
+      export GOPATH=$(go env GOPATH)
+      export GO111MODULE=auto
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"

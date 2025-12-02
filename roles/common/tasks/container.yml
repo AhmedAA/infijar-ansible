@@ -1,0 +1,5 @@
+---
+- name: Install common container packages
+  ansible.builtin.apt:
+    name: "{{ container_packages }}"
+    state: present

@@ -1,0 +1,27 @@
+---
+- name: Install gobuster, Go based TCP tunnel
+  ansible.builtin.shell:
+    cmd: |
+      export PATH="/opt/tools/bin:$PATH"
+
+      asdf exec go install -v github.com/OJ/gobuster/v3@latest
+      asdf reshim golang
+  args:
+    creates: "{{ target_user_home }}/.asdf/shims/gobuster"
+  become: yes
+  become_user: "{{ target_user }}"
+
+- name: Add gobuster history commands
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_history.d/gobuster.history"
+    content: |
+      gobuster dir -w `fzf-wordlists` -u http://192.168.56.0:8000/
+      gobuster dir -w `fzf-wordlists` -t 100 -x php,txt,pl,sh,asp,aspx,html,json,py,cfm,rb,cgi,bak,tar.gz,tgz,zip -u http://192.168.10.10/ -o OUTPUT_FILE
+      gobuster vhost -u http://machine.org -w `fzf-wordlists`
+      gobuster dir -w `fzf-wordlists` -t 20 -x php,txt,pl,sh,asp,aspx,html,json,py,cfm,rb,cgi,bak,tar.gz,tgz,zip -u "http://$TARGET/"
+      gobuster dir -w `fzf-wordlists` -u http://192.168.56.0:8000/
+      gobuster dns -d "$TARGET" -w `fzf-wordlists`
+      gobuster vhost -u "$TARGET" -w `fzf-wordlists` --append-domain
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"

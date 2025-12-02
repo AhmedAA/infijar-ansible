@@ -1,0 +1,47 @@
+#!/bin/bash
+
+VNC_CONFIG_DIR="{{ target_user_home }}/.config/tigervnc"
+VNC_PASSWORD_FILE="$VNC_CONFIG_DIR/passwd"
+
+DISPLAY_NUM=":10"
+PORT="5910"
+RESOLUTION="${VNC_RESOLUTION:-1920x1080}"
+
+echo "[*] Clearing host X11/Wayland environment variables..."
+unset XDG_RUNTIME_DIR
+unset XDG_SESSION_TYPE
+unset DISPLAY
+unset WAYLAND_DISPLAY
+
+echo "[*] Cleaning up stale VNC locks..."
+rm -f /tmp/.X11-unix/X${DISPLAY_NUM#:}
+rm -f /tmp/.X${DISPLAY_NUM#:}-lock
+rm -f $VNC_CONFIG_DIR/*.pid
+rm -f $VNC_CONFIG_DIR/*.log
+
+echo "[*] Configuring VNC password..."
+mkdir -p "$VNC_CONFIG_DIR"
+
+RAW_PASS="${VNC_PASSWORD:-kalilinux}"
+
+printf "%s" "$RAW_PASS" | vncpasswd -f > "$VNC_PASSWORD_FILE"
+chmod 600 "$VNC_PASSWORD_FILE"
+chown -R $VNC_USER:$VNC_USER "$VNC_CONFIG_DIR"
+
+echo "[*] Starting VNC server on $DISPLAY_NUM ($RESOLUTION)..."
+
+export USER=$VNC_USER
+
+su - {{ target_user }} -c "vncserver $DISPLAY_NUM \
+    -geometry $RESOLUTION \
+    -depth 24 \
+    -SecurityTypes TLSVnc,VncAuth \
+    -rfbauth $VNC_PASSWORD_FILE \
+    -rfbport $PORT \
+    -localhost yes"
+
+echo "---------------------------------------------------"
+echo "VNC Started on Display $DISPLAY_NUM"
+echo "Connect via: localhost:$PORT"
+echo "Password set from env var (default: 'kalilinux')"
+echo "---------------------------------------------------"

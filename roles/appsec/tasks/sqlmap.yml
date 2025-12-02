@@ -1,0 +1,26 @@
+---
+- name: Clone SQLMap repository
+  ansible.builtin.git:
+    repo: https://github.com/sqlmapproject/sqlmap.git
+    dest: /opt/tools/sqlmap
+    depth: 1
+    version: master
+  become: yes
+
+- name: Symlink sqlmap to global path
+  ansible.builtin.file:
+    src: /opt/tools/sqlmap/sqlmap.py
+    dest: /opt/tools/bin/sqlmap
+    state: link
+    force: yes
+    mode: '0755'
+  become: yes
+
+- name: Add SQLMap history commands
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_history.d/sqlmap.history"
+    content: |
+      sqlmap --forms --batch -u "http://somewebsite/"
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"

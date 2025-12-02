@@ -1,0 +1,142 @@
+---
+- name: Ensure zsh is installed
+  ansible.builtin.apt:
+    name: zsh
+    state: present
+
+- name: Check if Oh My Zsh is already installed
+  ansible.builtin.stat:
+    path: "{{ target_user_home }}/.oh-my-zsh"
+  register: omz_dir
+
+- name: Download Oh My Zsh installer
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh
+    dest: /tmp/ohmyzsh_install.sh
+    mode: '0755'
+  when: not omz_dir.stat.exists
+
+- name: Run Oh My Zsh installer (Unattended)
+  ansible.builtin.shell:
+    cmd: sh /tmp/ohmyzsh_install.sh --unattended
+  become: yes
+  become_user: "{{ target_user }}"
+  when: not omz_dir.stat.exists
+
+- name: Install Oh My Zsh custom plugins
+  ansible.builtin.git:
+    repo: "{{ item.repo }}"
+    dest: "{{ target_user_home }}/.oh-my-zsh/custom/plugins/{{ item.name }}"
+    depth: 1
+    version: master
+  loop:
+    - { name: 'zsh-autosuggestions', repo: 'https://github.com/zsh-users/zsh-autosuggestions' }
+    - { name: 'zsh-syntax-highlighting', repo: 'https://github.com/zsh-users/zsh-syntax-highlighting' }
+    - { name: 'zsh-completions', repo: 'https://github.com/zsh-users/zsh-completions' }
+    - { name: 'zsh-nvm', repo: 'https://github.com/lukechilds/zsh-nvm' }
+  become: yes
+  become_user: "{{ target_user }}"
+
+- name: Copy custom zshrc file
+  ansible.builtin.copy:
+    src: zshrc
+    dest: "{{ target_user_home }}/.zshrc"
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: '0644'
+  become: yes
+  become_user: "{{ target_user }}"
+
+- name: Pre-initialize zsh-nvm plugin
+  ansible.builtin.shell:
+    cmd: /bin/zsh -c "source {{ target_user_home }}/.oh-my-zsh/custom/plugins/zsh-nvm/zsh-nvm.plugin.zsh"
+  become: yes
+  become_user: "{{ target_user }}"
+  changed_when: false
+
+- name: Create drop-in directories for conf, aliases, and history
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+  loop:
+    - "{{ target_user_home }}/.zsh_aliases.d"
+    - "{{ target_user_home }}/.zsh_history.d"
+    - "{{ target_user_home }}/.zshrc.d"
+
+- name: Ensure .zshrc sources all files in .zshrc.d
+  ansible.builtin.blockinfile:
+    path: "{{ target_user_home }}/.zshrc"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK: DROP-IN CONFIGS"
+    block: |
+      # Load all configuration files from .zshrc.d
+      if [ -d "$HOME/.zshrc.d" ]; then
+        for config_file in "$HOME/.zshrc.d/"*.zsh; do
+          [ -r "$config_file" ] && source "$config_file"
+        done
+      fi
+    insertafter: EOF
+
+- name: Configure .zshrc to load aliases from .zsh_aliases.d
+  ansible.builtin.blockinfile:
+    path: "{{ target_user_home }}/.zshrc"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK: DROP-IN ALIASES"
+    block: |
+      # Load all alias files
+      if [ -d "$HOME/.zsh_aliases.d" ]; then
+        for alias_file in "$HOME/.zsh_aliases.d/"*.zsh; do
+          [ -r "$alias_file" ] && source "$alias_file"
+        done
+      fi
+    insertafter: EOF
+  become: yes
+  become_user: "{{ target_user }}"
+
+- name: Add CLI tool aliases
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_aliases.d/commands.zsh"
+    content: |
+      # Program aliases
+      alias ls="exa --icons"
+      alias cat="batcat"
+      alias ipa="ip --brief --color a"
+      alias fd="fdfind"
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+
+- name: Add system history commands
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_history.d/system.history"
+    content: |
+      mount -t cifs //192.168.56.201/C\$ /tmp/mnttarget/ -o username=anonymous -o domain=DOMAIN.COM
+      msgconvert example.msg
+      ssh-keygen -t rsa -b 4096 -f keyname
+      curl http://192.168.10.10/ --upload-file backdoor.php -v
+      rlwrap nc -lvnp 1337 | tee -a outfile
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+
+- name: Configure system shell settings
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zshrc.d/05-system.zsh"
+    content: |
+      # System Configuration
+      
+      # Automatically exit the shell when receiving SIGTERM 
+      # This ensures 'podman stop' works instantly.
+      trap exit TERM
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+
+- name: Create .hushlogin to suppress login banner
+  ansible.builtin.file:
+    path: "{{ target_user_home }}/.hushlogin"
+    state: touch
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"

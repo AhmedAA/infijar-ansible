@@ -1,0 +1,6 @@
+---
+cracking_apt_packages:
+  - hashcat
+  - fcrackzip
+  - pdfcrack
+  - bruteforce-luks

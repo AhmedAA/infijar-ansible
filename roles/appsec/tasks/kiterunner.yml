@@ -1,0 +1,63 @@
+---
+- name: Clone kiterunner repository
+  ansible.builtin.git:
+    repo: https://github.com/assetnote/kiterunner.git
+    dest: /opt/tools/kiterunner
+    depth: 1
+    version: main
+  become: yes
+
+- name: Ensure target user owns kiterunner directory
+  ansible.builtin.file:
+    path: /opt/tools/kiterunner
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    recurse: yes
+  become: yes
+
+- name: Build kiterunner
+  ansible.builtin.shell:
+    executable: /bin/bash
+    cmd: |
+      export PATH="/opt/tools/bin:$PATH"
+      mkdir -p dist
+      asdf exec go build -o dist/kr cmd/kiterunner/main.go
+    chdir: /opt/tools/kiterunner
+  args:
+    creates: /opt/tools/kiterunner/dist/kr
+  become: yes
+  become_user: "{{ target_user }}"
+
+- name: Symlink kr binary to global path
+  ansible.builtin.file:
+    src: /opt/tools/kiterunner/dist/kr
+    dest: /opt/tools/bin/kr
+    state: link
+    force: yes
+  become: yes
+
+- name: Download and extract Kiterunner wordlists
+  ansible.builtin.unarchive:
+    src: "{{ item }}"
+    dest: /opt/lists
+    remote_src: yes
+    creates: "/opt/lists/{{ item | basename | regex_replace('.tar.gz$', '') }}"
+  loop:
+    - https://wordlists-cdn.assetnote.io/data/kiterunner/routes-large.kite.tar.gz
+    - https://wordlists-cdn.assetnote.io/data/kiterunner/routes-small.kite.tar.gz
+  become: yes
+
+- name: Add kiterunner history commands
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_history.d/kiterunner.history"
+    content: |
+      kr brute https://target.com/subapp/ -A=aspx-210328:20000 -x 20 -j 1
+      kr brute https://target.com/subapp/ -w dirsearch.txt -x 20 -j 1 -exml,asp,aspx,ashx -D
+      kr scan hosts.txt -A=apiroutes-210328:20000 -x 5 -j 100 --fail-status-codes 400,401,404,403,501,502,426,411
+      kr scan https://target.com:8443/ -w  /opt/lists/routes-large.kite -A=apiroutes-210228:20000 -x 10 --ignore-length=34
+      kr scan target.com -w /opt/lists/routes-large.kite -A=apiroutes-210228:20000 -x 10 --ignore-length=34
+      kr scan target.com -w routes.kite -A=apiroutes-210328:20000 -x 20 -j 1 --fail-status-codes 400,401,404,403,501,502,426,411
+      kr scan targets.txt -w /opt/lists/routes-small.kite -A=apiroutes-210228:20000 -x 10 --ignore-length=34
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"

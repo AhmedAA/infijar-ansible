@@ -1,0 +1,14 @@
+---
+- name: Download OneListForAll - Micro
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/six2dez/OneListForAll/main/onelistforallmicro.txt
+    dest: /opt/lists/onelistforallmicro.txt
+    mode: '0644'
+  become: yes
+
+- name: Download OneListForAll - Short
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/six2dez/OneListForAll/main/onelistforallshort.txt
+    dest: /opt/lists/onelistforallshort.txt
+    mode: '0644'
+  become: yes

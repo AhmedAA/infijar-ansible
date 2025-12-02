@@ -1,0 +1,72 @@
+---
+### START glow
+- name: Install Glow, a markdown reader
+  ansible.builtin.shell:
+    cmd: |
+      export PATH="/opt/tools/bin:$PATH"
+
+      asdf exec go install github.com/charmbracelet/glow@latest
+      asdf reshim golang
+  args:
+    creates: "{{ target_user_home }}/.asdf/shims/glow"
+  become: yes
+  become_user: "{{ target_user }}"
+### END glow
+
+### START pyftpd
+- name: Install pyftpdlib, an FTP server module
+  ansible.builtin.shell:
+    cmd: "{{ pyenv_root }}/versions/{{ pyenv_python_versions[0] }}/bin/pip install pyftpdlib"
+  become: yes
+  register: pip_install_result
+  changed_when: "'Requirement already satisfied' not in pip_install_result.stdout"
+
+- name: Create pyftpdlib aliases
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_aliases.d/pyftpdlib.zsh"
+    content: |
+      # pyftpdlib Aliases
+      alias ftp-server="python3 -m pyftpdlib"
+      alias ftp-write="python3 -m pyftpdlib -w"
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+### END pyftpd
+
+### START yarn
+- name: Download Yarn GPG key
+  ansible.builtin.get_url:
+    url: https://dl.yarnpkg.com/debian/pubkey.gpg
+    dest: /tmp/yarn.gpg.armored
+    mode: '0644'
+
+- name: De-armor Yarn GPG key into trusted.gpg.d
+  ansible.builtin.shell:
+    cmd: gpg --dearmor --yes --output /etc/apt/trusted.gpg.d/yarn.gpg /tmp/yarn.gpg.armored
+  args:
+    creates: /etc/apt/trusted.gpg.d/yarn.gpg
+  become: yes
+
+- name: Ensure correct permissions on Yarn GPG key
+  ansible.builtin.file:
+    path: /etc/apt/trusted.gpg.d/yarn.gpg
+    mode: '0644'
+    owner: root
+    group: root
+  become: yes
+
+- name: Add Yarn repository
+  ansible.builtin.apt_repository:
+    repo: "deb https://dl.yarnpkg.com/debian/ stable main"
+    filename: yarn
+    state: present
+    update_cache: yes
+  become: yes
+
+- name: Install Yarn
+  ansible.builtin.apt:
+    name: yarn
+    state: present
+    install_recommends: no
+  become: yes
+### END yarn

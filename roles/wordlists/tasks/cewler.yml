@@ -1,0 +1,18 @@
+---
+- name: Install cewler via pipx
+  ansible.builtin.shell:
+    cmd: "{{ pyenv_root }}/versions/{{ pyenv_python_versions[0] }}/bin/pipx install --system-site-packages cewler"
+  args:
+    creates: "{{ target_user_home }}/.local/bin/cewler"
+  become: yes
+  become_user: "{{ target_user }}"
+
+- name: Add cewler history commands
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_history.d/cewler.history"
+    content: |
+      cewler --output cewler.txt "$TARGET"                                                                                                                     │
+      cewler --output cewler.txt --depth 5 --lowercase --min-word-length 2 --without-numbers "$TARGET"
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"

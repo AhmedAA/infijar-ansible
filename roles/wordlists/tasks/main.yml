@@ -1,0 +1,57 @@
+---
+- name: Load common defaults
+  ansible.builtin.include_vars:
+    file: ../../common/defaults/main.yml
+
+- name: Install wordlist tools through apt
+  ansible.builtin.apt:
+    name: "{{ wordlist_apt_packages }}"
+    state: present
+    install_recommends: no
+  become: yes
+
+- name: Create wordlist history drop-ins
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_history.d/{{ item.filename }}.history"
+    content: "{{ item.content }}"
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+  loop:
+    - filename: cupp
+      content: |
+        cupp -i
+
+    - filename: crunch
+      content: |
+        crunch 4 7 abcdefghijklmnopqrstuvwxyz1234567890 -o wordlist.txt
+
+- name: Create wordlist directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  loop:
+    - /opt/rules
+    - /opt/lists
+  become: yes
+
+- name: Install default creds cheat sheet
+  ansible.builtin.include_tasks: default_creds.yml
+
+- name: Install cewler
+  ansible.builtin.include_tasks: cewler.yml
+
+- name: Install cewl
+  ansible.builtin.include_tasks: cewl.yml
+
+- name: Install seclists
+  ansible.builtin.include_tasks: seclists.yml
+
+- name: Install OneListForAll
+  ansible.builtin.include_tasks: onelistforall.yml
+
+- name: Install hashcat rules
+  ansible.builtin.include_tasks: hashcat_rules.yml

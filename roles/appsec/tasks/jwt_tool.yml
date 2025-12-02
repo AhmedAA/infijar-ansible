@@ -1,0 +1,69 @@
+---
+- name: Clone jwt_tool repository
+  ansible.builtin.git:
+    repo: https://github.com/ticarpi/jwt_tool.git
+    dest: /opt/tools/jwt_tool
+    depth: 1
+    version: master
+  become: yes
+
+- name: Create venv and install legacy build tools
+  ansible.builtin.pip:
+    name:
+      - "setuptools<70"
+      - "wheel"
+    virtualenv: /opt/tools/jwt_tool/venv
+    virtualenv_python: "{{ pyenv_root }}/versions/{{ pyenv_python_versions[0] }}/bin/python"
+    virtualenv_site_packages: yes
+  become: yes
+
+- name: Install jwt_tool requirements
+  ansible.builtin.pip:
+    requirements: /opt/tools/jwt_tool/requirements.txt
+    virtualenv: /opt/tools/jwt_tool/venv
+  become: yes
+
+- name: Initialize jwt_tool configuration
+  ansible.builtin.shell:
+    cmd: "/opt/tools/jwt_tool/venv/bin/python /opt/tools/jwt_tool/jwt_tool.py"
+  args:
+    creates: "{{ target_user_home }}/.jwt_tool/jwtconf.ini"
+  become: yes
+  become_user: "{{ target_user }}"
+  ignore_errors: yes
+
+- name: Configure jwt_tool settings
+  ansible.builtin.lineinfile:
+    path: "{{ target_user_home }}/.jwt_tool/jwtconf.ini"
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  loop:
+    - regexp: '^proxy = 127.0.0.1:8080'
+      line: '#proxy = 127.0.0.1:8080'
+    - regexp: '^wordlist ='
+      line: 'wordlist = /opt/tools/jwt_tool/jwt-common.txt'
+    - regexp: '^commonHeaders ='
+      line: 'commonHeaders = /opt/tools/jwt_tool/common-headers.txt'
+    - regexp: '^commonPayloads ='
+      line: 'commonPayloads = /opt/tools/jwt_tool/common-payloads.txt'
+  become: yes
+  become_user: "{{ target_user }}"
+
+- name: Create jwt_tool aliases
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_aliases.d/jwt_tool.zsh"
+    content: |
+      # jwt_tool Alias
+      alias jwt_tool="/opt/tools/jwt_tool/venv/bin/python /opt/tools/jwt_tool/jwt_tool.py"
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+
+- name: Add jwt_tool history commands
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_history.d/jwt_tool.history"
+    content: |
+      jwt_tool <TOKEN>
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"

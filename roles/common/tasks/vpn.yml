@@ -1,0 +1,6 @@
+---
+- name: Install OpenVPN client
+  ansible.builtin.apt:
+    name: openvpn
+    state: present
+    install_recommends: no

@@ -1,0 +1,44 @@
+---
+- name: Create feroxbuster tool directory
+  ansible.builtin.file:
+    path: /opt/tools/feroxbuster
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Download and install feroxbuster
+  ansible.builtin.shell:
+    cmd: curl -sL https://raw.githubusercontent.com/epi052/feroxbuster/master/install-nix.sh | bash
+    chdir: /opt/tools/feroxbuster
+  args:
+    creates: /opt/tools/feroxbuster/feroxbuster
+  become: yes
+
+- name: Symlink feroxbuster to global path
+  ansible.builtin.file:
+    src: /opt/tools/feroxbuster/feroxbuster
+    dest: /opt/tools/bin/feroxbuster
+    state: link
+    force: yes
+  become: yes
+
+- name: Create feroxbuster aliases
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_aliases.d/feroxbuster.zsh"
+    content: |
+      # Feroxbuster Aliases
+        alias feroxbuster='/opt/tools/feroxbuster/feroxbuster'
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+
+- name: Add feroxbuster history commands
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_history.d/feroxbuster.history"
+    content: |
+      feroxbuster -w `fzf-wordlists` -u "http://$TARGET/"
+      feroxbuster --url http://192.168.10.10 --filter-status 404 --extensions php html txt --wordlist `fzf-wordlists` --threads 30 --output OUTPUT_FILE --depth 1                                                                                                                                                       │
+      feroxbuster --url https://192.168.10.10 --insecure --filter-status 404 --extensions php html txt --wordlist `fzf-wordlists` --threads 30 --output OUTPUT_FILE --depth 1
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"

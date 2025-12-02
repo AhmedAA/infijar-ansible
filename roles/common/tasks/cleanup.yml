@@ -1,0 +1,17 @@
+---
+# This task is being run from the post_tasks in the playbook.
+- name: Remove build dependencies to save space
+  ansible.builtin.apt:
+    name: "{{ build_dependencies }}"
+    state: absent
+    autoremove: yes
+    clean: yes
+  become: yes
+
+- name: Autoremove unneeded packages
+  ansible.builtin.apt:
+    autoremove: yes
+
+- name: Clean apt package cache
+  ansible.builtin.apt:
+    clean: yes

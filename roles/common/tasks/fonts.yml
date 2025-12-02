@@ -1,0 +1,39 @@
+---
+- name: Ensure 'unzip' utility is installed
+  ansible.builtin.apt:
+    name: unzip
+    state: present
+    install_recommends: no
+
+- name: Get latest Nerd Fonts release info from GitHub API
+  ansible.builtin.uri:
+    url: https://api.github.com/repos/ryanoasis/nerd-fonts/releases/latest
+    method: GET
+    return_content: yes
+    headers:
+      Accept: "application/vnd.github.v3+json"
+  register: font_release_data
+
+- name: Find FantasqueSansMono.zip URL from release assets
+  ansible.builtin.set_fact:
+    font_download_url: >-
+      {{ (font_release_data.json.assets
+          | selectattr('name', 'equalto', 'FantasqueSansMono.zip')
+          | map(attribute='browser_download_url')
+          | first) }}
+  when: font_release_data.json.assets is defined
+
+- name: Ensure font destination directory exists
+  ansible.builtin.file:
+    path: /usr/share/fonts/truetype/
+    state: directory
+    mode: '0755'
+
+- name: Download and unarchive FantasqueSansMono Nerd Font
+  ansible.builtin.unarchive:
+    src: "{{ font_download_url }}"
+    
+    dest: /usr/share/fonts/truetype/
+    remote_src: yes
+    creates: /usr/share/fonts/truetype/Fantasque Sans Mono Regular Nerd Font Complete.otf
+  when: font_download_url is defined

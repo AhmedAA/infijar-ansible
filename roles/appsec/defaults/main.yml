@@ -1,0 +1,4 @@
+---
+appsec_apt_packages:
+  - dirb
+  - prips

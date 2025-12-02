@@ -1,0 +1,36 @@
+---
+- name: Install testssl dependencies
+  ansible.builtin.apt:
+    name:
+      - bsdmainutils
+      - bsdextrautils
+      - dnsutils
+    state: present
+    install_recommends: no
+  become: yes
+
+- name: Clone testssl.sh repository
+  ansible.builtin.git:
+    repo: https://github.com/testssl/testssl.sh.git
+    dest: /opt/tools/testssl.sh
+    depth: 1
+    version: 3.3dev
+  become: yes
+
+- name: Symlink testssl.sh to global path
+  ansible.builtin.file:
+    src: /opt/tools/testssl.sh/testssl.sh
+    dest: /opt/tools/bin/testssl
+    state: link
+    force: yes
+    mode: '0755'
+  become: yes
+
+- name: Add testssl history commands
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_history.d/testssl.history"
+    content: |
+      testssl $TARGET
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"

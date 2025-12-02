@@ -1,0 +1,38 @@
+---
+- name: Create project directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  loop:
+    - /opt/tools/bin
+    - /data
+
+- name: Add user directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+  loop:
+    - "{{ target_user_home }}/.local/bin"
+    - "{{ target_user_home }}/.config"
+
+- name: Append to PATH
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zshrc.d/01-paths.zsh"
+    content: |
+      export PATH=/opt/tools/bin:{{ target_user_home }}/.local/bin:$PATH
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+
+- name: Copy starship config
+  ansible.builtin.copy:
+    src: starship.toml
+    dest: "{{ target_user_home }}/.config/starship.toml"
+    mode: '0644'
+  become: yes
