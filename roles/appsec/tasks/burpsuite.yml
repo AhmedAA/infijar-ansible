@@ -9,6 +9,11 @@
   ansible.builtin.set_fact:
     burp_version: "{{ burp_version_output.stdout }}"
 
+- name: Set Java Architecture path variable
+  ansible.builtin.set_fact:
+    java_arch: "{{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' }}"
+
+
 - name: Create base Burp directories
   ansible.builtin.file:
     path: "{{ item }}"
@@ -40,9 +45,23 @@
     - name: Deploy User Configs
       ansible.builtin.copy:
         src: burpsuite/UserConfig.json
-        dest: "{{ target_user_home }}/.BurpSuite/UserConfig.json"
+        dest: "{{ target_user_home }}/.BurpSuite/UserConfigCommunity.json"
         owner: "{{ target_user }}"
         group: "{{ target_user }}"
+        mode: '0644'
+      ignore_errors: yes
+
+    - name: Deploy Proxy Config
+      ansible.builtin.copy:
+        src: burpsuite/conf.json
+        dest: "/opt/tools/BurpSuiteCommunity/conf.json"
+        mode: '0644'
+      ignore_errors: yes
+
+    - name: Deploy project settings
+      ansible.builtin.copy:
+        src: burpsuite/ProjectConfig.json
+        dest: "/opt/tools/BurpSuiteCommunity/ProjectConfig.json"
         mode: '0644'
       ignore_errors: yes
 
@@ -51,7 +70,7 @@
         dest: "{{ target_user_home }}/.zsh_aliases.d/burp-community.zsh"
         content: |
           # Burp Suite Community
-          alias burpsuite='/usr/lib/jvm/java-21-openjdk-amd64/bin/java -jar -Xmx4g /opt/tools/BurpSuiteCommunity/BurpSuiteCommunity.jar'
+          alias burpsuite='/usr/lib/jvm/java-21-openjdk-{{ java_arch }}/bin/java -jar -Xmx4g /opt/tools/BurpSuiteCommunity/BurpSuiteCommunity.jar --config-file=/opt/tools/BurpSuiteCommunity/ProjectConfig.json'
         mode: '0644'
         owner: "{{ target_user }}"
   become: yes
@@ -73,12 +92,26 @@
         dest: /opt/tools/BurpSuitePro/BurpSuitePro.jar
         mode: '0644'
 
-    - name: Deploy User Configs (Pro)
+    - name: Deploy User Config
       ansible.builtin.copy:
         src: burpsuite/UserConfig.json
-        dest: "{{ target_user_home }}/.BurpSuite/UserConfig.json"
+        dest: "{{ target_user_home }}/.BurpSuite/UserConfigPro.json"
         owner: "{{ target_user }}"
         group: "{{ target_user }}"
+        mode: '0644'
+      ignore_errors: yes
+
+    - name: Deploy Proxy Config
+      ansible.builtin.copy:
+        src: burpsuite/conf.json
+        dest: "/opt/tools/BurpSuitePro/conf.json"
+        mode: '0644'
+      ignore_errors: yes
+
+    - name: Deploy project settings
+      ansible.builtin.copy:
+        src: burpsuite/ProjectConfig.json
+        dest: "/opt/tools/BurpSuitePro/ProjectConfig.json"
         mode: '0644'
       ignore_errors: yes
 
@@ -87,7 +120,7 @@
         dest: "{{ target_user_home }}/.zsh_aliases.d/burp-pro.zsh"
         content: |
           # Burp Suite Professional
-          alias burpsuite='/usr/lib/jvm/java-21-openjdk-amd64/bin/java -jar -Xmx4g /opt/tools/BurpSuitePro/BurpSuitePro.jar'
+          alias burpsuite='/usr/lib/jvm/java-21-openjdk-{{ java_arch }}/bin/java -jar -Xmx4g /opt/tools/BurpSuitePro/BurpSuitePro.jar --config-file=/opt/tools/BurpSuiteCommunity/ProjectConfig.json'
         mode: '0644'
         owner: "{{ target_user }}"
   become: yes

@@ -1,0 +1,7 @@
+{
+    "project_options": {
+        "misc": {
+            "allow_user_to_disable_browser_sandbox": true
+        }
+    }
+}
