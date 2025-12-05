@@ -21,22 +21,22 @@
   become: yes
 
 - name: Create Wireshark .desktop entry
-    ansible.builtin.copy:
-      dest: "/usr/share/applications/wireshark.desktop"
-      mode: '0644'
-      owner: root
-      group: root
-      content: |
-        [Desktop Entry]
-        Name=Wireshark
-        Comment=Network packet analyser
-        Exec=/usr/bin/wireshark
-        Icon=/usr/share/icons/Papirus/16x16/apps/wireshark.svg
-        Terminal=false
-        Type=Application
-        StartupNotify=true
-        Categories=Infijar;NetSec;
-        MimeType=text/plain;
+  ansible.builtin.copy:
+    dest: "/usr/share/applications/wireshark.desktop"
+    mode: '0644'
+    owner: root
+    group: root
+    content: |
+      [Desktop Entry]
+      Name=Wireshark
+      Comment=Network packet analyser
+      Exec=/usr/bin/wireshark
+      Icon=/usr/share/icons/Papirus/16x16/apps/wireshark.svg
+      Terminal=false
+      Type=Application
+      StartupNotify=true
+      Categories=Infijar;NetSec;
+      MimeType=text/plain;
 
 - name: Create Netsec history drop-ins
   ansible.builtin.copy:
