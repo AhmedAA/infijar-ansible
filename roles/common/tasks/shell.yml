@@ -140,3 +140,9 @@
     mode: '0644'
     owner: "{{ target_user }}"
     group: "{{ target_user }}"
+
+- name: Change default shell to zsh for target user
+  ansible.builtin.user:
+    name: "{{ target_user }}"
+    shell: /bin/zsh
+  become: yes

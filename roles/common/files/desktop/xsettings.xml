@@ -2,14 +2,14 @@
 
 <channel name="xsettings" version="1.0">
   <property name="Net" type="empty">
-    <property name="ThemeName" type="string" value="Gruvbox-Dark-BL"/>
+    <property name="ThemeName" type="string" value="Gruvbox-B-LB-Dark-Soft"/>
     <property name="IconThemeName" type="string" value="Papirus-Dark"/>
     
-    <property name="FontName" type="string" value="DejaVu Sans 10"/>
+    <property name="FontName" type="string" value="DejaVu Sans Book 12"/>
   </property>
   
   <property name="Gtk" type="empty">
-    <property name="MonospaceFontName" type="string" value="FantasqueSansMono Nerd Font 12"/>
+    <property name="MonospaceFontName" type="string" value="FantasqueSansM Nerd Font Regular 12"/>
   </property>
 
   <property name="Xft" type="empty">

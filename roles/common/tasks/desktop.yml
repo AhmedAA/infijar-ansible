@@ -10,6 +10,7 @@
       - novnc
       - websockify
       - dbus-x11
+      - terminator
       - intltool
       - libtool
       - librsvg2-common
@@ -25,7 +26,7 @@
 
 - name: Copy VNC stop script from files
   ansible.builtin.copy:
-    src: stop-desktop
+    src: desktop/stop-desktop
     dest: /usr/local/bin/stop-desktop
     mode: '0755'
 
@@ -39,7 +40,7 @@
 
 - name: Copy xstartup config file
   ansible.builtin.copy:
-    src: xstartup
+    src: desktop/xstartup
     dest: "{{ target_user_home }}/.config/tigervnc"
     owner: "{{ target_user }}"
     group: "{{ target_user }}"
@@ -56,54 +57,31 @@
     mode: "0644"
 
 ### Theming
-- name: Create user themes directory
+- name: Add desktop theming directories
   ansible.builtin.file:
-    path: "{{ target_user_home }}/.themes"
+    path: "{{ item }}"
     state: directory
     mode: '0755'
     owner: "{{ target_user }}"
     group: "{{ target_user }}"
-  become: yes
+  loop:
+    - "{{ target_user_home }}/.themes"
+    - "{{ target_user_home }}/.config/xfce4/xfconf/xfce-perchannel-xml"
+    - "{{ target_user_home }}/.config/menus"
+    - "{{ target_user_home }}/.config/terminator"
 
-- name: Download and extract Gruvbox GTK Theme to /tmp
+- name: Install Gruvbox GTK Theme from local archive
   ansible.builtin.unarchive:
-    src: https://github.com/Fausto-Korpsvart/Gruvbox-GTK-Theme/archive/refs/heads/master.zip
-    dest: /tmp
-    remote_src: yes
-  become: yes
-
-- name: Install Gruvbox Themes to user directory
-  ansible.builtin.shell:
-    cmd: cp -r -n /tmp/Gruvbox-GTK-Theme-master/themes/* {{ target_user_home }}/.themes/
-  args:
-    creates: "{{ target_user_home }}/.themes/Gruvbox-Dark-BL"
-  become: yes
-
-- name: Fix ownership of themes
-  ansible.builtin.file:
-    path: "{{ target_user_home }}/.themes"
+    src: desktop/Gruvbox-B-LB-dark-Soft.tar.xz
+    dest: "{{ target_user_home }}/.themes"
     owner: "{{ target_user }}"
     group: "{{ target_user }}"
-    recurse: yes
+    creates: "{{ target_user_home }}/.themes/Gruvbox-B-LB-Dark-Soft"
   become: yes
-
-- name: Clean up temporary theme files
-  ansible.builtin.file:
-    path: /tmp/Gruvbox-GTK-Theme-master
-    state: absent
-  become: yes
-
-- name: Ensure XFCE config directory exists
-  ansible.builtin.file:
-    path: "{{ target_user_home }}/.config/xfce4/xfconf/xfce-perchannel-xml"
-    state: directory
-    owner: "{{ target_user }}"
-    group: "{{ target_user }}"
-    mode: '0755'
 
 - name: Apply XFCE xsettings
   ansible.builtin.copy:
-    src: xsettings.xml
+    src: desktop/xsettings.xml
     dest: "{{ target_user_home }}/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml"
     owner: "{{ target_user }}"
     group: "{{ target_user }}"
@@ -111,25 +89,57 @@
 
 - name: Apply XFCE xfwm settings
   ansible.builtin.copy:
-    src: xfwm4.xml
+    src: desktop/xfwm4.xml
     dest: "{{ target_user_home }}/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml"
     owner: "{{ target_user }}"
     group: "{{ target_user }}"
     mode: '0644'
 
-- name: Deploy custom wallpaper image
+- name: Apply XFCE desktop settings
   ansible.builtin.copy:
-    src: "iamroot_cozette.png"
-    dest: "/usr/share/backgrounds/iamroot_cozette.png"
+    src: desktop/xfce4-desktop.xml
+    dest: "{{ target_user_home }}/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml"
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: '0644'
+
+- name: Apply XFCE applications menu settings
+  ansible.builtin.copy:
+    src: desktop/xfce-applications.menu
+    dest: "{{ target_user_home }}/.config/menus/xfce-applications.menu"
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: '0644'
+
+- name: Apply terminator config
+  ansible.builtin.copy:
+    src: desktop/terminator.config
+    dest: "{{ target_user_home }}/.config/terminator/config"
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: '0644'
+
+- name: Add directory entry in the menu overview
+  ansible.builtin.copy:
+    src: desktop/infijar.directory
+    dest: "/usr/share/desktop-directories/infijar.directory"
     mode: '0644'
     owner: root
     group: root
   become: yes
 
-- name: Apply Desktop Background Configuration (xfce4-desktop)
-  ansible.builtin.template:
-    src: xfce4-desktop.xml.j2
-    dest: "{{ target_user_home }}/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml"
-    owner: "{{ target_user }}"
-    group: "{{ target_user }}"
+- name: Create directory for backgrounds
+  ansible.builtin.file:
+    path: "/usr/share/backgrounds/infijar"
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Deploy custom wallpaper image
+  ansible.builtin.copy:
+    src: desktop/iamroot_cozette.png
+    dest: "/usr/share/backgrounds/infijar/iamroot_cozette.png"
     mode: '0644'
+    owner: root
+    group: root
+  become: yes

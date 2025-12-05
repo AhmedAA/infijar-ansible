@@ -73,6 +73,24 @@
           alias burpsuite='/usr/lib/jvm/java-21-openjdk-{{ java_arch }}/bin/java -jar -Xmx4g /opt/tools/BurpSuiteCommunity/BurpSuiteCommunity.jar --config-file=/opt/tools/BurpSuiteCommunity/ProjectConfig.json'
         mode: '0644'
         owner: "{{ target_user }}"
+
+    - name: Create Burp Suite .desktop entry
+        ansible.builtin.copy:
+          dest: /usr/share/applications/burpsuite.desktop
+          mode: '0644'
+          owner: root
+          group: root
+          content: |
+            [Desktop Entry]
+            Name=Burpsuite
+            Comment=Web pentest proxy and audit tool
+            Exec=/usr/lib/jvm/java-21-openjdk-{{ java_arch }}/bin/java -jar -Xmx4g /opt/tools/BurpSuiteCommunity/BurpSuiteCommunity.jar
+            Icon=/usr/share/icons/Papirus/16x16/apps/kali-burpsuite.svg
+            Terminal=false
+            Type=Application
+            StartupNotify=true
+            Categories=Infijar;AppSec;
+            MimeType=text/plain;
   become: yes
   when: burp_community | bool
 
@@ -123,6 +141,24 @@
           alias burpsuite='/usr/lib/jvm/java-21-openjdk-{{ java_arch }}/bin/java -jar -Xmx4g /opt/tools/BurpSuitePro/BurpSuitePro.jar --config-file=/opt/tools/BurpSuiteCommunity/ProjectConfig.json'
         mode: '0644'
         owner: "{{ target_user }}"
+
+    - name: Create Burp Suite .desktop entry
+      ansible.builtin.copy:
+        dest: /usr/share/applications/burpsuite.desktop
+        mode: '0644'
+        owner: root
+        group: root
+        content: |
+          [Desktop Entry]
+          Name=Burpsuite
+          Comment=Web pentest proxy and audit tool
+          Exec=/usr/lib/jvm/java-21-openjdk-{{ java_arch }}/bin/java -jar -Xmx4g /opt/tools/BurpSuitePro/BurpSuitePro.jar
+          Icon=/usr/share/icons/Papirus/16x16/apps/kali-burpsuite.svg
+          Terminal=false
+          Type=Application
+          StartupNotify=true
+          Categories=Infijar;AppSec;
+          MimeType=text/plain;
   become: yes
   when: burp_pro | bool
 

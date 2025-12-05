@@ -2,10 +2,37 @@
 
 VNC_CONFIG_DIR="{{ target_user_home }}/.config/tigervnc"
 VNC_PASSWORD_FILE="$VNC_CONFIG_DIR/passwd"
-
-DISPLAY_NUM=":10"
-PORT="5910"
 RESOLUTION="${VNC_RESOLUTION:-1920x1080}"
+
+# Default Bind IP: 127.0.0.1 (Secure by default).
+# Override with VNC_BIND_HOST=0.0.0.0 to expose to network.
+HOST="${VNC_BIND_HOST:-127.0.0.1}"
+
+# Default Protocol: vnc (or http for noVNC)
+PROTO="${VNC_PROTO:-vnc}"
+
+# Default Port: 5910 (VNC) or 6901 (HTTP)
+PORT="${VNC_PORT:-5910}"
+
+# --- Helper: Find Available Display ---
+find_available_display() {
+  # Logic: Scan existing X11 sockets to avoid collision
+  local sockets
+  if [ -d /tmp/.X11-unix/ ]; then
+    # Get all socket numbers (e.g., X0, X1 -> 0, 1)
+    sockets=$(find "/tmp/.X11-unix/" -type s -name "X*" -printf "%f\n" | cut -d 'X' -f2)
+  fi
+  
+  # Start checking from :10 to be safe from standard desktop range (0-9)
+  local i=10
+  while true; do
+    if ! echo "$sockets" | grep -q "^$i$"; then
+      echo "$i"
+      return
+    fi
+    ((i++))
+  done
+}
 
 echo "[*] Clearing host X11/Wayland environment variables..."
 unset XDG_RUNTIME_DIR
@@ -14,34 +41,64 @@ unset DISPLAY
 unset WAYLAND_DISPLAY
 
 echo "[*] Cleaning up stale VNC locks..."
-rm -f /tmp/.X11-unix/X${DISPLAY_NUM#:}
-rm -f /tmp/.X${DISPLAY_NUM#:}-lock
 rm -f $VNC_CONFIG_DIR/*.pid
 rm -f $VNC_CONFIG_DIR/*.log
 
 echo "[*] Configuring VNC password..."
-mkdir -p "$VNC_CONFIG_DIR"
-
 RAW_PASS="${VNC_PASSWORD:-kalilinux}"
-
+{% raw %}
+[ ${#RAW_PASS} -lt 6 ] && while [ ${#RAW_PASS} -lt 6 ]; do RAW_PASS="${RAW_PASS}0"; done
 printf "%s" "$RAW_PASS" | vncpasswd -f > "$VNC_PASSWORD_FILE"
 chmod 600 "$VNC_PASSWORD_FILE"
 chown -R $VNC_USER:$VNC_USER "$VNC_CONFIG_DIR"
+{% endraw %}
 
-echo "[*] Starting VNC server on $DISPLAY_NUM ($RESOLUTION)..."
+DISPLAY_NUM=$(find_available_display)
+DISPLAY_ID=":$DISPLAY_NUM"
 
-export USER=$VNC_USER
+export USER={{ target_user }}
 
-su - {{ target_user }} -c "vncserver $DISPLAY_NUM \
-    -geometry $RESOLUTION \
-    -depth 24 \
-    -SecurityTypes TLSVnc,VncAuth \
-    -rfbauth $VNC_PASSWORD_FILE \
-    -rfbport $PORT \
-    -localhost yes"
+# Function to run VNC Server
+start_tigervnc() {
+  local bind_arg="$1" # "yes" (localhost) or "no" (any)
+  local port_arg="$2"
+  
+  echo "[*] Starting TigerVNC on $DISPLAY_ID (Port $port_arg, Localhost: $bind_arg)..."
+
+  rm -f /tmp/.X11-unix/X$DISPLAY_NUM
+  rm -f /tmp/.X$DISPLAY_NUM-lock
+
+  su - {{ target_user }} -c "vncserver $DISPLAY_ID \
+      -geometry $RESOLUTION \
+      -depth 24 \
+      -SecurityTypes TLSVnc,VncAuth \
+      -rfbauth $VNC_PASSWORD_FILE \
+      -rfbport $port_arg \
+      -localhost $bind_arg"
+}
+
+case "$PROTO" in
+  vnc)
+    if [[ "$HOST" == "127.0.0.1" || "$HOST" == "localhost" ]]; then
+        LOCAL_FLAG="yes"
+    else
+        LOCAL_FLAG="no"
+    fi
+    start_tigervnc "$LOCAL_FLAG" "$PORT"
+    ;;
+
+  http)
+    VNC_INTERNAL_PORT=$(python3 -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()')
+    
+    start_tigervnc "yes" "$VNC_INTERNAL_PORT"
+
+    echo "[*] Starting noVNC (Websockify) on $HOST:$PORT..."
+    websockify -D --web /usr/share/novnc/ "$HOST:$PORT" "127.0.0.1:$VNC_INTERNAL_PORT"
+    ;;
+esac
 
 echo "---------------------------------------------------"
-echo "VNC Started on Display $DISPLAY_NUM"
-echo "Connect via: localhost:$PORT"
-echo "Password set from env var (default: 'kalilinux')"
+echo "✅ Desktop Started ($PROTO mode)"
+echo "👉 Connect via: $HOST:$PORT (Display $DISPLAY_ID)"
+[[ "$PROTO" == "http" ]] && echo "🌐 URL: http://$HOST:$PORT/vnc.html"
 echo "---------------------------------------------------"
