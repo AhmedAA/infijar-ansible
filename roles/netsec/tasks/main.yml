@@ -22,7 +22,7 @@
 
 - name: Create Wireshark .desktop entry
     ansible.builtin.copy:
-      dest: /usr/share/applications/wireshark.desktop
+      dest: "/usr/share/applications/wireshark.desktop"
       mode: '0644'
       owner: root
       group: root
