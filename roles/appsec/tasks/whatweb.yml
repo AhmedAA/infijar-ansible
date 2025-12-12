@@ -1,6 +1,4 @@
 ---
-# tasks file for installing WhatWeb
-
 - name: Clone WhatWeb repository
   ansible.builtin.git:
     repo: https://github.com/urbanadventurer/WhatWeb.git

@@ -1,0 +1,17 @@
+---
+- name: Install geowordlists via pipx
+  ansible.builtin.shell:
+    cmd: "{{ pyenv_root }}/versions/{{ pyenv_python_versions[0] }}/bin/pipx install --system-site-packages git+https://github.com/p0dalirius/GeoWordlists"
+  args:
+    creates: "{{ target_user_home }}/.local/bin/geowordlists"
+  become: yes
+  become_user: "{{ target_user }}"
+
+- name: Add geowordlists history commands
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_history.d/geowordlists.history"
+    content: |
+      geowordlists --postal-code 75001 --kilometers 25 --output-file /tmp/around_paris.txt
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"

@@ -1,0 +1,48 @@
+---
+- name: Load common defaults
+  ansible.builtin.include_vars:
+    file: ../../common/defaults/main.yml
+
+- name: Install forensics tools from apt
+  ansible.builtin.apt:
+    name: "{{ forensics_apt_packages }}"
+    state: present
+    install_recommends: no
+  become: yes
+
+- name: Create forensics history drop-ins
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_history.d/{{ item.filename }}.history"
+    content: "{{ item.content }}"
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+  loop:
+    - filename: foremost
+      content: |
+        foremost -i image.png
+
+    - filename: testdisk
+      content: |
+        testdisk image.dd
+
+    - filename: fdisk
+      content: |
+        fdisk image.dd
+        fdisk -l
+
+    - filename: binwalk
+      content: |
+        binwalk -e image.png
+
+- name: Create forensics aliases drop-ins
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_aliases.d/{{ item.filename }}.zsh"
+    content: "{{ item.content }}"
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+  loop:
+    - filename: binwalk
+      content: |
+        alias binwalk='binwalk --run-as=root'

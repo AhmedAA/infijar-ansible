@@ -1,0 +1,29 @@
+---
+- name: Install haiti as a gem
+  ansible.builtin.shell:
+    cmd: |
+      /usr/local/rvm/bin/rvm {{ rvm_default_ruby }}@haiti --create do gem install haiti-hash
+  become: yes
+  args:
+    creates: /usr/local/rvm/gems/ruby-{{ rvm_default_ruby }}@haiti/bin/haiti
+
+- name: Create haiti aliases
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_aliases.d/haiti.zsh"
+    content: |
+      alias haiti='/usr/local/rvm/gems/ruby-{{ rvm_default_ruby }}@haiti/wrappers/ruby /usr/local/rvm/gems/ruby-{{ rvm_default_ruby }}@haiti/bin/haiti'
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+
+- name: Add haiti history commands
+  ansible.builtin.copy:
+    dest: "{{ target_user_home }}/.zsh_history.d/haiti.history"
+    content: |
+      haiti $HASH
+      haiti --extended $HASH
+      haiti --no-color --short $HASH
+      haiti samples $REF
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"

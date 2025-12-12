@@ -81,6 +81,7 @@
       - eza
       - zoxide
       - fd-find
+      - pv
       - atool
       - hexyl
       - httpie

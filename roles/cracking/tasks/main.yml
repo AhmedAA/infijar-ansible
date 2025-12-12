@@ -48,3 +48,6 @@
 
 - name: Install Name That Hash
   ansible.builtin.include_tasks: name_that_hash.yml
+
+- name: Install haiti
+  ansible.builtin.include_tasks: haiti.yml

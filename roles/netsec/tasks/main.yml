@@ -129,3 +129,6 @@
 
 - name: Include Chisel setup
   ansible.builtin.include_tasks: chisel.yml
+
+- name: Include proxychains setup
+  ansible.builtin.include_tasks: proxychains.yml

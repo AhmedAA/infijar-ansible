@@ -1,0 +1,9 @@
+---
+forensics_apt_packages:
+  - pst-utils
+  - foremost
+  - testdisk
+  - fdisk
+  - sleuthkit
+  - squashfs-tools
+  - binwalk
